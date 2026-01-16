@@ -84,6 +84,24 @@ pnpm install state-reducer
 yarn add state-reducer
 ```
 
+## Examples
+
+This repository includes comprehensive examples demonstrating all features. See the [examples/](./examples/) folder for:
+
+- **Flat State Machine**: Simple traffic light
+- **Nested State Machine**: Form with hierarchical validation
+- **Parallel State Machine**: Media player with independent controls
+- **Context Changes**: Shopping cart with immutable updates
+- **Guard Conditions**: Authentication with conditional transitions
+
+Run all examples:
+
+```bash
+pnpm run examples
+```
+
+All examples run with `debug: true` to show detailed state machine operation logs.
+
 ## Usage
 
 ### Basic Example

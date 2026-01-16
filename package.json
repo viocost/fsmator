@@ -26,6 +26,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
+    "examples": "npx tsx examples/index.ts",
     "prepublishOnly": "pnpm run build"
   },
   "keywords": [
