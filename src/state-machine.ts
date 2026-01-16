@@ -826,6 +826,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    * Select enabled transitions for the given event from the current configuration
    * Returns the first enabled transition for each active atomic state
    * Deduplicates transitions from shared ancestors (important for parallel states)
+   * Implements shadowing: child transitions shadow parent transitions
    */
   private selectTransitions(
     event: Event,
@@ -892,7 +893,34 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       }
     }
 
-    return selectedTransitions;
+    // Apply shadowing: filter out parent transitions whose children handled the event
+    // Algorithm:
+    // 1. For each selected transition, mark all parallel ancestors as "child-handled"
+    // 2. Remove transitions where the source is a parallel state marked as "child-handled"
+    const parallelStatesWithHandlers = new Set<string>();
+
+    // Pass 1: Identify which parallel states have children that handled the event
+    for (const { source } of selectedTransitions) {
+      let current = source.parent;
+      while (current) {
+        if (current.isParallel()) {
+          parallelStatesWithHandlers.add(current.id);
+          this.log(`   📍 Marking parallel state ${current.id} as child-handled`);
+        }
+        current = current.parent;
+      }
+    }
+
+    // Pass 2: Filter out shadowed parent transitions
+    const filteredTransitions = selectedTransitions.filter(({ source }) => {
+      if (source.isParallel() && parallelStatesWithHandlers.has(source.id)) {
+        this.log(`   🚫 Shadowing parent transition from ${source.id} (children handled event)`);
+        return false;
+      }
+      return true;
+    });
+
+    return filteredTransitions;
   }
 
   /**
