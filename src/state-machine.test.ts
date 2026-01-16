@@ -244,11 +244,12 @@ describe('StateMachine', () => {
       const config: StateMachineConfig<TestContext, TestEvents> = {
         initialContext: { count: 0 },
         initial: 'idle',
+        guards: {
+          isPositive: ({ context }) => context.count > 0,
+        },
         states: {
           idle: {
-            always: [
-              { target: 'active', guard: 'isPositive' },
-            ],
+            always: [{ target: 'active', guard: 'isPositive' }],
           },
           active: {},
         },

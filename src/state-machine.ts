@@ -282,6 +282,9 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     this.configuration = newConfig;
 
     this.log('✅ Initial configuration:', Array.from(this.configuration));
+
+    // Evaluate always transitions after initialization
+    this.evaluateAlwaysTransitions(initEvent);
   }
 
   /**
@@ -537,35 +540,70 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   }
 
   /**
-   * Main event handler - processes an event and transitions the machine
-   *
-   * Algorithm:
-   * 1. Select enabled transitions from current configuration
-   * 2. For each transition, compute exit and entry sets using LCA
-   * 3. Execute exits (leaf to root order)
-   * 4. Execute transition assigns
-   * 5. Execute entries (root to leaf order)
-   * 6. Update configuration and context
+   * Select enabled always transitions from the current configuration
+   * Always transitions are eventless and checked after state stabilization
    */
-  send(event: Event): void {
-    this.log(`\n📨 Event received: ${event.type}`);
-    this.log(`   Current configuration:`, Array.from(this.configuration));
+  private selectAlwaysTransitions(
+    config: Set<string>,
+    context: Context
+  ): Array<{ source: StateNode; transition: NodeTransition }> {
+    const atomicNodes = this.getActiveAtomicNodes(config);
+    const selectedTransitions: Array<{ source: StateNode; transition: NodeTransition }> = [];
 
-    const selectedTransitions = this.selectTransitions(event, this.configuration, this.context);
+    // For each active atomic state, find enabled always transition
+    for (const atomicNode of atomicNodes) {
+      // Check always transitions from this node and ancestors (document order)
+      const ancestors = atomicNode.getAncestors(); // [self, parent, ..., root]
 
-    // If no transitions are enabled, do nothing
-    if (selectedTransitions.length === 0) {
-      this.log(`   No enabled transitions found`);
-      return;
+      for (const node of ancestors) {
+        const transitions = node.alwaysTransitions;
+
+        if (transitions.length > 0) {
+          this.log(`   Found ${transitions.length} always transition(s) in ${node.id}`);
+        }
+
+        // Find first enabled always transition
+        for (const transition of transitions) {
+          // Check guard if present
+          if (transition.guard) {
+            // Create a synthetic event for guard evaluation
+            const syntheticEvent = { type: '__always__' } as Event;
+            if (!this.evaluateGuard(transition.guard, context, syntheticEvent, node.id)) {
+              continue;
+            }
+          }
+
+          // Found enabled always transition
+          const targetDesc = transition.targetIds ? transition.targetIds.join(', ') : 'internal';
+          this.log(`   ✓ Selected always transition: ${node.id} → ${targetDesc}`);
+          selectedTransitions.push({ source: atomicNode, transition });
+          break; // Stop at first enabled transition for this source
+        }
+
+        // If we found a transition, stop checking ancestors
+        if (selectedTransitions.some((t) => t.source === atomicNode)) {
+          break;
+        }
+      }
     }
 
-    this.log(`\n🔀 Processing ${selectedTransitions.length} transition(s)`);
+    return selectedTransitions;
+  }
 
-    let newContext = this.context;
-    const newConfig = new Set<string>(this.configuration);
+  /**
+   * Process a list of transitions and update context and configuration
+   * Used by both event transitions and always transitions
+   */
+  private processTransitions(
+    transitions: Array<{ source: StateNode; transition: NodeTransition }>,
+    event: Event,
+    context: Context,
+    config: Set<string>
+  ): Context {
+    let newContext = context;
 
     // Process each transition
-    for (const { source, transition } of selectedTransitions) {
+    for (const { source, transition } of transitions) {
       // Handle internal transitions (no target = context-only)
       if (!transition.targetIds || transition.targetIds.length === 0) {
         this.log(`\n🔀 Internal transition in: ${source.id}`);
@@ -595,7 +633,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
 
         // Exit the state
         newContext = this.deactivateState(source, event, newContext);
-        newConfig.delete(source.id);
+        config.delete(source.id);
 
         // Execute transition assign
         if (transition.assign) {
@@ -603,7 +641,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
         }
 
         // Re-enter the state
-        newContext = this.activateState(source, event, newContext, newConfig);
+        newContext = this.activateState(source, event, newContext, config);
         continue;
       }
 
@@ -650,34 +688,125 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
         entrySet.map((n) => n.id)
       );
 
-      // Step 3: Execute exit actions (leaf to root)
+      // Execute exit actions (leaf to root)
       for (const node of exitSet) {
         newContext = this.deactivateState(node, event, newContext);
-        newConfig.delete(node.id);
+        config.delete(node.id);
       }
 
-      // Step 4: Execute transition assign actions
+      // Execute transition assign actions
       if (transition.assign) {
         const stateId = source.id;
         this.log(`   ⚙️  Executing transition assign`);
         newContext = this.executeReducer(transition.assign, newContext, event, stateId);
       }
 
-      // Step 5: Execute entry actions (root to leaf)
+      // Execute entry actions (root to leaf)
       // Enter all nodes in entry set WITHOUT following children
       for (let i = 0; i < entrySet.length; i++) {
         const node = entrySet[i]!;
         const isLast = i === entrySet.length - 1;
         // Only follow children for the last node (the explicit target)
-        newContext = this.activateState(node, event, newContext, newConfig, isLast);
+        newContext = this.activateState(node, event, newContext, config, isLast);
       }
     }
 
-    // Step 6: Update machine state
+    return newContext;
+  }
+
+  /**
+   * Main event handler - processes an event and transitions the machine
+   *
+   * Algorithm:
+   * 1. Select enabled transitions from current configuration
+   * 2. For each transition, compute exit and entry sets using LCA
+   * 3. Execute exits (leaf to root order)
+   * 4. Execute transition assigns
+   * 5. Execute entries (root to leaf order)
+   * 6. Update configuration and context
+   * 7. Evaluate always transitions until none are enabled (microsteps)
+   */
+  send(event: Event): void {
+    this.log(`\n📨 Event received: ${event.type}`);
+    this.log(`   Current configuration:`, Array.from(this.configuration));
+
+    const selectedTransitions = this.selectTransitions(event, this.configuration, this.context);
+
+    // If no transitions are enabled, check always transitions anyway
+    if (selectedTransitions.length === 0) {
+      this.log(`   No enabled transitions found`);
+      // Still need to check always transitions even if no event transitions
+      this.evaluateAlwaysTransitions(event);
+      return;
+    }
+
+    this.log(`\n🔀 Processing ${selectedTransitions.length} transition(s)`);
+
+    let newContext = this.context;
+    const newConfig = new Set<string>(this.configuration);
+
+    // Process event transitions
+    newContext = this.processTransitions(selectedTransitions, event, newContext, newConfig);
+
+    // Update machine state
     this.context = newContext;
     this.configuration = newConfig;
 
     this.log(`\n✅ New configuration:`, Array.from(this.configuration));
+
+    // Evaluate always transitions (may cause additional transitions)
+    this.evaluateAlwaysTransitions(event);
+  }
+
+  /**
+   * Evaluate always transitions in microsteps until no more are enabled
+   * This implements XState's eventless transition behavior
+   */
+  private evaluateAlwaysTransitions(event: Event): void {
+    const MAX_ITERATIONS = 100; // Prevent infinite loops
+    let iterations = 0;
+
+    while (iterations < MAX_ITERATIONS) {
+      iterations++;
+
+      const alwaysTransitions = this.selectAlwaysTransitions(this.configuration, this.context);
+
+      if (alwaysTransitions.length === 0) {
+        // No more always transitions enabled, we're done
+        break;
+      }
+
+      // Check if all transitions are internal (no target)
+      const allInternal = alwaysTransitions.every(
+        ({ transition }) => !transition.targetIds || transition.targetIds.length === 0
+      );
+
+      this.log(
+        `\n⚡ Processing ${alwaysTransitions.length} always transition(s) (iteration ${iterations})`
+      );
+
+      let newContext = this.context;
+      const newConfig = new Set<string>(this.configuration);
+
+      // Process always transitions
+      newContext = this.processTransitions(alwaysTransitions, event, newContext, newConfig);
+
+      // Update machine state
+      this.context = newContext;
+      this.configuration = newConfig;
+
+      this.log(`\n✅ Configuration after always:`, Array.from(this.configuration));
+
+      // If all transitions were internal (no target), stop looping
+      // Internal transitions don't change configuration, so they won't re-enable
+      if (allInternal) {
+        break;
+      }
+    }
+
+    if (iterations >= MAX_ITERATIONS) {
+      throw new Error('Maximum always transition iterations reached - possible infinite loop');
+    }
   }
 
   /**
