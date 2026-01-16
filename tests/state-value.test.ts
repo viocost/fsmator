@@ -372,6 +372,36 @@ describe('StateMachine.getStateValue()', () => {
         },
       });
     });
+
+    it('should handle parallel state with atomic regions (empty object representation)', () => {
+      const config: StateMachineConfig<TestContext, TestEvent> = {
+        initialContext: { value: 0 },
+        initial: 'red',
+        states: {
+          red: {
+            type: 'parallel',
+            on: { NEXT: 'green' },
+            states: {
+              dummyOne: {},
+              dummyTwo: {},
+            },
+          },
+          green: {},
+        },
+      };
+
+      const machine = new StateMachine(config).start();
+      // Atomic regions in parallel state are represented as empty objects
+      expect(machine.getStateValue()).toEqual({
+        red: {
+          dummyOne: {},
+          dummyTwo: {},
+        },
+      });
+
+      machine.send({ type: 'NEXT' });
+      expect(machine.getStateValue()).toBe('green');
+    });
   });
 
   describe('mixed hierarchies', () => {

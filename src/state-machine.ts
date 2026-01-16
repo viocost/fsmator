@@ -233,25 +233,29 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    */
   getStateValue(): StateValue {
     // Start from root and build state value
-    return this.buildStateValue(this.root);
+    return this.buildStateValue(this.root, false);
   }
 
   /**
    * Build state value recursively from a node
+   * @param node - The node to build value for
+   * @param skipKey - Whether to skip wrapping with node key (for parallel regions)
    */
-  private buildStateValue(node: StateNode): StateValue {
+  private buildStateValue(node: StateNode, skipKey: boolean): StateValue {
     // For root, return value of first active child
     if (node === this.root) {
       const activeChild = node.children.find((child) => this.configuration.has(child.id));
       if (!activeChild) {
         throw new Error('No active state found');
       }
-      return this.buildStateValue(activeChild);
+      return this.buildStateValue(activeChild, false);
     }
 
-    // For atomic states, return just the key
+    // For atomic states
     if (node.isAtomic()) {
-      return node.key;
+      // If skipKey is true (parallel region), return empty object
+      // Otherwise, return just the key
+      return skipKey ? {} : node.key;
     }
 
     // For compound states, find the active child
@@ -261,7 +265,13 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
         // If no child is active, return just the key (edge case)
         return node.key;
       }
-      const childValue = this.buildStateValue(activeChild);
+      const childValue = this.buildStateValue(activeChild, false);
+
+      // If this is a parallel region, return child value directly without wrapping
+      if (skipKey) {
+        return childValue;
+      }
+
       return { [node.key]: childValue };
     }
 
@@ -269,11 +279,18 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     if (node.isParallel()) {
       const result: Record<string, StateValue> = {};
       for (const region of node.regions) {
-        const activeChild = region.children.find((child) => this.configuration.has(child.id));
-        if (activeChild) {
-          result[region.key] = this.buildStateValue(activeChild);
+        // Check if the region itself is active
+        if (this.configuration.has(region.id)) {
+          // Build value for region with skipKey=true so it doesn't wrap itself
+          result[region.key] = this.buildStateValue(region, true);
         }
       }
+
+      // If this parallel node is itself a parallel region, return regions directly
+      if (skipKey) {
+        return result;
+      }
+
       return { [node.key]: result };
     }
 

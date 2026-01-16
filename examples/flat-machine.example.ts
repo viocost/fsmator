@@ -56,12 +56,17 @@ export function runFlatMachineExample() {
 
   const machine = new StateMachine(config).start();
 
+  console.log('state ', machine.getStateValue())
   console.log('state counters', machine.getStateCounters())
   console.log('\n--- Cycling through lights ---');
   machine.send({ type: 'NEXT' }); // red → yellow
 
+  console.log('state ', machine.getStateValue())
   console.log('state counters', machine.getStateCounters())
   machine.send({ type: 'NEXT' }); // yellow → green
+
+  console.log('state ', machine.getStateValue())
+  console.log('state counters', machine.getStateCounters())
 
   console.log('state counters', machine.getStateCounters())
   machine.send({ type: 'NEXT' }); // green → red (increments cycle)
@@ -77,4 +82,5 @@ export function runFlatMachineExample() {
   console.log('Configuration:', Array.from(machine.getActiveStateNodes()));
   console.log('Context:', machine.getContext());
   console.log('state counters', machine.getStateCounters())
+  console.log('state ', machine.getStateValue())
 }
