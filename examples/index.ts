@@ -10,13 +10,17 @@ import { runNestedMachineExample } from './nested-machine.example';
 //import { runParallelMachineExample } from './parallel-machine.example';
 import { runContextChangesExample } from './context-changes.example';
 import { runGuardConditionsExample } from './guard-conditions.example';
+import { runEdgeCaseExample } from './parallel-machine.example';
+import { runParallelEdgeCaseExample } from './edge-parallel';
 
 console.log('╔' + '═'.repeat(78) + '╗');
 console.log('║' + ' '.repeat(20) + 'STATE REDUCER EXAMPLES' + ' '.repeat(35) + '║');
 console.log('╚' + '═'.repeat(78) + '╝');
 
 // Run all examples
-runFlatMachineExample();
+//runFlatMachineExample();
+// runEdgeCaseExample()
+runParallelEdgeCaseExample();
 // runNestedMachineExample();
 // runParallelMachineExample();
 // runContextChangesExample();

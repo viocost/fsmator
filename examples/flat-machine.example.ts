@@ -58,29 +58,51 @@ export function runFlatMachineExample() {
 
   console.log('state ', machine.getStateValue())
   console.log('state counters', machine.getStateCounters())
+
+  console.log('Context:', machine.getContext());
   console.log('\n--- Cycling through lights ---');
   machine.send({ type: 'NEXT' }); // red → yellow
 
   console.log('state ', machine.getStateValue())
   console.log('state counters', machine.getStateCounters())
+  console.log('Context:', machine.getContext());
   machine.send({ type: 'NEXT' }); // yellow → green
 
   console.log('state ', machine.getStateValue())
   console.log('state counters', machine.getStateCounters())
+  console.log('Context:', machine.getContext());
 
-  console.log('state counters', machine.getStateCounters())
   machine.send({ type: 'NEXT' }); // green → red (increments cycle)
 
   console.log('state counters', machine.getStateCounters())
   console.log('\n--- Reset cycle ---');
   machine.send({ type: 'NEXT' }); // red → yellow
+
+  console.log('state ', machine.getStateValue())
+  console.log('state counters', machine.getStateCounters())
+  console.log('Context:', machine.getContext());
   machine.send({ type: 'NEXT' }); // yellow → green
+
+
+  console.log('state ', machine.getStateValue())
+  console.log('state counters', machine.getStateCounters())
+
+  console.log('Context:', machine.getContext());
+
   machine.send({ type: 'RESET' }); // green → red (resets cycle)
 
+  console.log('state ', machine.getStateValue())
+  console.log('state counters', machine.getStateCounters())
 
+  console.log('Context:', machine.getContext());
 
   console.log('Configuration:', Array.from(machine.getActiveStateNodes()));
-  console.log('Context:', machine.getContext());
-  console.log('state counters', machine.getStateCounters())
-  console.log('state ', machine.getStateValue())
+
+  const snapshot = machine.getSnapshot()
+  const newMachine = new StateMachine(config).load(snapshot).start();
+  newMachine.send({ type: 'NEXT' });
+  console.log("State counters new machine:", newMachine.getStateCounters());
+
+  console.dir(config, { depth: null });
+
 }

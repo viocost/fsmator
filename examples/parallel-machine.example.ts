@@ -6,152 +6,106 @@
 import { StateMachine } from '../src/state-machine';
 import type { StateMachineConfig } from '../src/types';
 
-type MediaContext = {
-  volume: number;
-  currentTime: number;
-  duration: number;
-  isPlaying: boolean;
-  events: string[];
+type EdgeCaseContext = {
+  logs: string[];
 };
 
-type MediaEvent =
-  | { type: 'PLAY' }
-  | { type: 'PAUSE' }
-  | { type: 'STOP' }
-  | { type: 'VOLUME_UP' }
-  | { type: 'VOLUME_DOWN' }
-  | { type: 'MUTE' }
-  | { type: 'UNMUTE' };
+type EdgeCaseEvent = { type: 'PING' } | { type: 'RESET' };
 
-export function runParallelMachineExample() {
+export function runEdgeCaseExample() {
   console.log('\n' + '='.repeat(80));
-  console.log('Example 3: Parallel State Machine (Media Player)');
+  console.log('Example 2: Edge Cases (Transient, Shadowing, Parallel)');
   console.log('='.repeat(80));
 
-  const config: StateMachineConfig<MediaContext, MediaEvent> = {
-    initial: 'player',
-    debug: true,
-    initialContext: {
-      volume: 50,
-      currentTime: 0,
-      duration: 180,
-      isPlaying: false,
-      events: [],
+  const config: StateMachineConfig<EdgeCaseContext, EdgeCaseEvent> = {
+    initial: 'root',
+    initialContext: { logs: [] },
+    // We register specific reducers to log every step of the lifecycle
+    reducers: {
+      // --- Transient Lifecycle Loggers ---
+      logEnterParent: ({ context }) => ({ logs: [...context.logs, '1. ENTER Parent'] }),
+      logEnterChild: ({ context }) => ({ logs: [...context.logs, '2. ENTER Child'] }),
+      logExitChild: ({ context }) => ({ logs: [...context.logs, '3. EXIT Child'] }),
+      logExitParent: ({ context }) => ({ logs: [...context.logs, '4. EXIT Parent'] }),
+      logArrivedStable: ({ context }) => ({ logs: [...context.logs, '5. ARRIVED Stable'] }),
+
+      // --- Shadowing Loggers ---
+      logChildHandled: ({ context }) => ({ logs: [...context.logs, '✅ Child Handled PING'] }),
+      logParentHandled: ({ context }) => ({ logs: [...context.logs, '❌ Parent Handled PING (Error: Should be Shadowed!)'] }),
     },
     states: {
-      player: {
-        // Parallel state: both playback and volume are active simultaneously
-        states: {
-          playback: {
-            initial: 'stopped',
-            states: {
-              stopped: {
-                onEntry: ['logStopped'],
-                on: {
-                  PLAY: { target: 'playing', assign: 'setPlaying' },
-                },
-              },
-              playing: {
-                onEntry: ['logPlaying'],
-                on: {
-                  PAUSE: { target: 'paused', assign: 'setPaused' },
-                  STOP: { target: 'stopped', assign: 'setStopped' },
-                },
-              },
-              paused: {
-                onEntry: ['logPaused'],
-                on: {
-                  PLAY: { target: 'playing', assign: 'setPlaying' },
-                  STOP: { target: 'stopped', assign: 'setStopped' },
-                },
-              },
-            },
-          },
-          volume: {
-            initial: 'normal',
-            states: {
-              normal: {
-                onEntry: ['logNormalVolume'],
-                on: {
-                  VOLUME_UP: { assign: 'increaseVolume' },
-                  VOLUME_DOWN: { assign: 'decreaseVolume' },
-                  MUTE: 'muted',
-                },
-              },
-              muted: {
-                onEntry: ['logMuted'],
-                on: {
-                  UNMUTE: 'normal',
-                },
-              },
-            },
-          },
+      root: {
+        type: 'parallel',
+        // PARENT HANDLER:
+        // In XState, if *any* child handles 'PING', this parent handler must be BLOCKED.
+        // If your lib is correct, 'logParentHandled' will NEVER appear in the logs.
+        on: {
+          PING: { assign: 'logParentHandled' }
         },
-      },
-    },
-    reducers: {
-      logStopped: ({ context }) => {
-        return {
-          events: [...context.events, 'stopped'],
-        };
-      },
-      logPlaying: ({ context }) => {
-        return {
-          events: [...context.events, 'playing'],
-        };
-      },
-      logPaused: ({ context }) => {
-        return {
+        states: {
+          // ============================================================
+          // REGION 1: THE TRANSIENT YO-YO
+          // Tests: onEntry -> nested onEntry -> always -> nested onExit -> onExit
+          // ============================================================
+          transientRegion: {
+            initial: 'transientParent',
+            states: {
+              transientParent: {
+                onEntry: ['logEnterParent'],
+                onExit: ['logExitParent'],
 
-          events: [...context.events, 'paused'],
+                // The "Always" Transition
+                // Should trigger immediately after 'transientChild' is fully entered.
+                always: [{ target: 'stable' }],
 
+                initial: 'transientChild',
+                states: {
+                  transientChild: {
+                    onEntry: ['logEnterChild'],
+                    onExit: ['logExitChild']
+                  }
+                }
+              },
+              stable: {
+                onEntry: ['logArrivedStable']
+              }
+            }
+          },
 
-        };
-      },
-      logNormalVolume: ({ context }) => {
-        console.log('    [Player] Volume is normal');
-        return {
+          // ============================================================
+          // REGION 2: THE ACTIVE CHILD
+          // Tests: Child handling event shadows the parent
+          // ============================================================
+          shadowRegion: {
+            initial: 'listening',
+            states: {
+              listening: {
+                on: {
+                  PING: { assign: 'logChildHandled' }
+                }
+              }
+            }
+          },
 
-          events: [...context.events, 'volume_normal'],
-
-        };
-      },
-      logMuted: ({ context }) => {
-        return {
-          events: [...context.events, 'muted'],
-        };
-      },
-      setPlaying: () => ({ isPlaying: true }),
-      setPaused: () => ({ isPlaying: false }),
-      setStopped: () => ({ isPlaying: false, currentTime: 0 }),
-      increaseVolume: ({ context }) => ({
-        volume: Math.min(100, context.volume + 10),
-      }),
-      decreaseVolume: ({ context }) => ({
-        volume: Math.max(0, context.volume - 10),
-      }),
-    },
+          // ============================================================
+          // REGION 3: THE SILENT CHILD
+          // Tests: Even if this region ignores PING, Region 2 caught it,
+          // so Parent still shouldn't fire.
+          // ============================================================
+          silentRegion: {
+            initial: 'idle',
+            states: {
+              idle: {}
+            }
+          }
+        }
+      }
+    }
   };
 
-  const machine = new StateMachine(config);
-
-  console.log('\n--- Playing and adjusting volume independently ---');
-  machine.send({ type: 'PLAY' }); // Start playback
-  machine.send({ type: 'VOLUME_UP' }); // Increase volume while playing
-  machine.send({ type: 'VOLUME_UP' }); // Increase again
-  machine.send({ type: 'PAUSE' }); // Pause playback (volume state unchanged)
-
-  console.log('\n--- Mute while paused ---');
-  machine.send({ type: 'MUTE' }); // Mute while paused
-
-  console.log('\n--- Resume and unmute ---');
-  machine.send({ type: 'PLAY' }); // Resume playback
-  machine.send({ type: 'UNMUTE' }); // Unmute
-
-  console.log('\n--- Stop playback ---');
-  machine.send({ type: 'STOP' }); // Stop (resets currentTime)
-
-  console.log('\n--- Final State ---');
-  console.log('Configuration:', Array.from(machine.getActiveStateNodes()));
-  console.log('Context:', machine.getContext());
+  const machine = new StateMachine(config).start();
+  console.log('\n--- Phase 1: Transient Initialization ---');
+  // Just by starting, the machine should have drilled down and bubbled up.
+  // We expect the logs to show the full entry/exit cycle.
+  console.log('Context Logs:', machine.getContext().logs);
 }
