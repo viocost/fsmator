@@ -21,6 +21,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   private root: StateNode;
   private context: Context;
   private configuration: Set<string> = new Set();
+  private debugEnabled: boolean = false;
 
   // Registries
   private guards: Map<string | symbol, Guard<Context, Event>> = new Map();
@@ -31,6 +32,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
 
   constructor(config: StateMachineConfig<Context, Event>) {
     this.context = config.initialContext;
+    this.debugEnabled = config.debug ?? false;
 
     // Register guards and reducers
     if (config.guards) {
@@ -104,6 +106,15 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   }
 
   /**
+   * Log debug message if debug mode is enabled
+   */
+  private log(message: string, ...args: any[]): void {
+    if (this.debugEnabled) {
+      console.log(message, ...args);
+    }
+  }
+
+  /**
    * Execute a reducer by reference and return updated context (pure)
    */
   private executeReducer(
@@ -116,8 +127,16 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     if (!reducer) {
       throw new Error(`Reducer "${String(reducerRef)}" not found`);
     }
+    this.log(`   ⚙️  Executing reducer: ${String(reducerRef)}`);
     const updates = reducer({ context, event, state });
-    return { ...context, ...updates };
+    const newContext = { ...context, ...updates };
+
+    // Log context changes
+    if (this.debugEnabled && Object.keys(updates).length > 0) {
+      this.log(`      Context updates:`, updates);
+    }
+
+    return newContext;
   }
 
   /**
@@ -140,6 +159,8 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    * Initialize the state machine by activating initial states
    */
   private initialize(): void {
+    this.log('🚀 Initializing state machine');
+
     // Create a synthetic initialization event
     const initEvent = { type: '__init__' } as Event;
 
@@ -153,6 +174,8 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     const newConfig = new Set<string>();
     this.context = this.activateState(initialState, initEvent, this.context, newConfig);
     this.configuration = newConfig;
+
+    this.log('✅ Initial configuration:', Array.from(this.configuration));
   }
 
   /**
@@ -212,6 +235,8 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     config: Set<string>,
     followChildren: boolean = true
   ): Context {
+    this.log(`➡️  Entering state: ${node.id}`);
+
     // Step 1: Execute onEntry actions
     let newContext = this.executeReducers(node.onEntry, context, event, node.id);
 
@@ -249,6 +274,8 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    * @returns Updated context
    */
   private deactivateState(node: StateNode, event: Event, context: Context): Context {
+    this.log(`⬅️  Exiting state: ${node.id}`);
+
     // Execute onExit actions
     return this.executeReducers(node.onExit, context, event, node.id);
   }
@@ -304,7 +331,9 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       if (!guard) {
         throw new Error(`Guard "${String(guardRef)}" not found`);
       }
-      return guard({ context, event, state });
+      const result = guard({ context, event, state });
+      this.log(`   🛡️  Guard "${String(guardRef)}": ${result ? 'PASS' : 'FAIL'}`);
+      return result;
     }
 
     if (typeof guardRef === 'object' && 'type' in guardRef) {
@@ -313,18 +342,23 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
         if (!guard) {
           throw new Error(`Guard "${String(guardRef.id)}" not found`);
         }
-        return guard({ context, event, state });
+        const result = guard({ context, event, state });
+        this.log(`   🛡️  Guard "${String(guardRef.id)}": ${result ? 'PASS' : 'FAIL'}`);
+        return result;
       }
 
       if (guardRef.type === 'and') {
+        this.log(`   🛡️  Evaluating AND guard`);
         return guardRef.items.every((item) => this.evaluateGuard(item, context, event, state));
       }
 
       if (guardRef.type === 'or') {
+        this.log(`   🛡️  Evaluating OR guard`);
         return guardRef.items.some((item) => this.evaluateGuard(item, context, event, state));
       }
 
       if (guardRef.type === 'not') {
+        this.log(`   🛡️  Evaluating NOT guard`);
         return !this.evaluateGuard(guardRef.item, context, event, state);
       }
     }
@@ -342,15 +376,28 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     context: Context
   ): Array<{ source: StateNode; transition: NodeTransition }> {
     const atomicNodes = this.getActiveAtomicNodes(config);
+    this.log(
+      `🔍 Checking transitions for active atomic states:`,
+      atomicNodes.map((n) => n.id)
+    );
+
     const selectedTransitions: Array<{ source: StateNode; transition: NodeTransition }> = [];
 
     // For each active atomic state, find enabled transition
     for (const atomicNode of atomicNodes) {
+      this.log(`   Checking state: ${atomicNode.id}`);
+
       // Check transitions from this node and ancestors (document order)
       const ancestors = atomicNode.getAncestors(); // [self, parent, ..., root]
 
       for (const node of ancestors) {
         const transitions = node.getTransitions(event.type);
+
+        if (transitions.length > 0) {
+          this.log(
+            `   Found ${transitions.length} transition(s) on event "${event.type}" in ${node.id}`
+          );
+        }
 
         // Find first enabled transition
         for (const transition of transitions) {
@@ -362,6 +409,8 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
           }
 
           // Found enabled transition
+          const targetDesc = transition.targetIds ? transition.targetIds.join(', ') : 'internal';
+          this.log(`   ✓ Selected transition: ${node.id} → ${targetDesc}`);
           selectedTransitions.push({ source: atomicNode, transition });
           break; // Stop at first enabled transition for this source
         }
@@ -388,12 +437,18 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    * 6. Update configuration and context
    */
   send(event: Event): void {
+    this.log(`\n📨 Event received: ${event.type}`);
+    this.log(`   Current configuration:`, Array.from(this.configuration));
+
     const selectedTransitions = this.selectTransitions(event, this.configuration, this.context);
 
     // If no transitions are enabled, do nothing
     if (selectedTransitions.length === 0) {
+      this.log(`   No enabled transitions found`);
       return;
     }
+
+    this.log(`\n🔀 Processing ${selectedTransitions.length} transition(s)`);
 
     let newContext = this.context;
     const newConfig = new Set<string>(this.configuration);
@@ -402,6 +457,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     for (const { source, transition } of selectedTransitions) {
       // Handle internal transitions (no target = context-only)
       if (!transition.targetIds || transition.targetIds.length === 0) {
+        this.log(`\n🔀 Internal transition in: ${source.id}`);
         // Internal transition: just execute assign actions
         if (transition.assign) {
           const stateId = source.id;
@@ -424,6 +480,8 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       // Handle self-transition (source === target)
       // In XState, self-transitions exit and re-enter the state
       if (source === target) {
+        this.log(`\n🔀 Self-transition: ${source.id}`);
+
         // Exit the state
         newContext = this.deactivateState(source, event, newContext);
         newConfig.delete(source.id);
@@ -457,6 +515,17 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
         current = current.parent;
       }
 
+      this.log(`\n🔀 Transition: ${source.id} → ${target.id}`);
+      this.log(`   LCA: ${lca.id}`);
+      this.log(
+        `   Exit set:`,
+        exitSet.map((n) => n.id)
+      );
+      this.log(
+        `   Entry set:`,
+        entrySet.map((n) => n.id)
+      );
+
       // Step 3: Execute exit actions (leaf to root)
       for (const node of exitSet) {
         newContext = this.deactivateState(node, event, newContext);
@@ -466,6 +535,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       // Step 4: Execute transition assign actions
       if (transition.assign) {
         const stateId = source.id;
+        this.log(`   ⚙️  Executing transition assign`);
         newContext = this.executeReducer(transition.assign, newContext, event, stateId);
       }
 
@@ -482,6 +552,8 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     // Step 6: Update machine state
     this.context = newContext;
     this.configuration = newConfig;
+
+    this.log(`\n✅ New configuration:`, Array.from(this.configuration));
   }
 
   /**

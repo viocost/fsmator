@@ -142,6 +142,7 @@ export interface StateMachineConfig<Context extends StateContext, Event extends 
   initial: string;
   on?: OnTransitions<Event>;
   states: Record<string, StateConfig<Event>>;
+  debug?: boolean;
 }
 
 /**
