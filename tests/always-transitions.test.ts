@@ -488,4 +488,138 @@ describe('Always Transitions', () => {
       expect(machine.getActiveStateNodes().has('idle')).toBe(true);
     });
   });
+
+  describe('Single Object Always Transitions', () => {
+    it('should accept single object instead of array for always', () => {
+      const config: StateMachineConfig<{ count: number }, { type: 'NEXT' }> = {
+        initial: 'checking',
+        initialContext: { count: 0 },
+        states: {
+          checking: {
+            always: { target: 'ready' }, // Single object, not array
+          },
+          ready: {},
+        },
+      };
+
+      const machine = new StateMachine(config).start();
+
+      // Should immediately transition to ready
+      expect(machine.getActiveStateNodes().has('ready')).toBe(true);
+      expect(machine.getActiveStateNodes().has('checking')).toBe(false);
+    });
+
+    it('should accept single object with guard', () => {
+      const config: StateMachineConfig<{ count: number }, { type: 'START' }> = {
+        initial: 'idle',
+        initialContext: { count: 5 },
+        guards: {
+          isReady: ({ context }) => context.count >= 3,
+        },
+        states: {
+          idle: {
+            on: { START: 'waiting' },
+          },
+          waiting: {
+            always: { target: 'done', guard: 'isReady' }, // Single object with guard
+          },
+          done: {},
+        },
+      };
+
+      const machine = new StateMachine(config).start();
+      machine.send({ type: 'START' });
+
+      // Should transition to done because guard passes
+      expect(machine.getActiveStateNodes().has('done')).toBe(true);
+    });
+
+    it('should accept single object with assign', () => {
+      const config: StateMachineConfig<{ count: number }, { type: 'START' }> = {
+        initial: 'idle',
+        initialContext: { count: 0 },
+        reducers: {
+          increment: ({ context }) => ({ count: context.count + 1 }),
+        },
+        states: {
+          idle: {
+            on: { START: 'processing' },
+          },
+          processing: {
+            always: { target: 'done', assign: 'increment' }, // Single object with assign
+          },
+          done: {},
+        },
+      };
+
+      const machine = new StateMachine(config).start();
+      expect(machine.getContext().count).toBe(0);
+
+      machine.send({ type: 'START' });
+
+      expect(machine.getActiveStateNodes().has('done')).toBe(true);
+      expect(machine.getContext().count).toBe(1);
+    });
+
+    it('should accept single object with guard and assign', () => {
+      const config: StateMachineConfig<{ count: number }, { type: 'START' }> = {
+        initial: 'idle',
+        initialContext: { count: 0 },
+        guards: {
+          canProcess: ({ context }) => context.count === 0,
+        },
+        reducers: {
+          increment: ({ context }) => ({ count: context.count + 1 }),
+        },
+        states: {
+          idle: {
+            on: { START: 'processing' },
+          },
+          processing: {
+            always: {
+              target: 'done',
+              guard: 'canProcess',
+              assign: 'increment',
+            }, // Single object with both guard and assign
+          },
+          done: {},
+        },
+      };
+
+      const machine = new StateMachine(config).start();
+      machine.send({ type: 'START' });
+
+      // Guard passes (count === 0), so transition and increment
+      expect(machine.getActiveStateNodes().has('done')).toBe(true);
+      expect(machine.getContext().count).toBe(1);
+    });
+
+    it('should support internal always transition with single object', () => {
+      const config: StateMachineConfig<{ count: number }, { type: 'START' }> = {
+        initial: 'idle',
+        initialContext: { count: 0 },
+        guards: {
+          shouldIncrement: ({ context }) => context.count < 5,
+        },
+        reducers: {
+          increment: ({ context }) => ({ count: context.count + 1 }),
+        },
+        states: {
+          idle: {
+            on: { START: 'active' },
+          },
+          active: {
+            always: { assign: 'increment', guard: 'shouldIncrement' }, // No target = internal
+          },
+        },
+      };
+
+      const machine = new StateMachine(config).start();
+      machine.send({ type: 'START' });
+
+      // Should stay in active and increment once
+      expect(machine.getActiveStateNodes().has('active')).toBe(true);
+      expect(machine.getContext().count).toBe(1);
+    });
+  });
 });

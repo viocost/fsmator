@@ -1319,7 +1319,10 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
 
     // Compile always transitions
     if (stateConfig.always) {
-      const alwaysTransitions = stateConfig.always.map((t) => this.compileTransition(t, node));
+      const alwaysArray = Array.isArray(stateConfig.always)
+        ? stateConfig.always
+        : [stateConfig.always];
+      const alwaysTransitions = alwaysArray.map((t) => this.compileTransition(t, node));
       node.addAlwaysTransitions(alwaysTransitions);
     }
 

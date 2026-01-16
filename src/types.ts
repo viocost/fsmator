@@ -114,7 +114,7 @@ export interface AlwaysTransition {
 export interface StateConfig<Event extends BaseEvent> {
   type?: 'final' | 'parallel';
   on?: OnTransitions<Event>;
-  always?: AlwaysTransition[];
+  always?: AlwaysTransition | AlwaysTransition[];
   activities?: Array<string | symbol>;
   onEntry?: Array<string | symbol>;
   onExit?: Array<string | symbol>;
