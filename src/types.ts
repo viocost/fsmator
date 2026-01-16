@@ -11,10 +11,10 @@ export type BaseEvent = { type: string; [key: string]: any };
 /**
  * Extract event by type
  */
-export type EventByType<
-  Event extends BaseEvent,
-  Type extends Event['type']
-> = Extract<Event, { type: Type }>;
+export type EventByType<Event extends BaseEvent, Type extends Event['type']> = Extract<
+  Event,
+  { type: Type }
+>;
 
 /**
  * Arguments for guards and reducers
@@ -51,7 +51,7 @@ export type Reducer<Context extends StateContext, Event extends BaseEvent> = (
 export type TypedReducer<
   Context extends StateContext,
   Event extends BaseEvent,
-  Type extends Event['type']
+  Type extends Event['type'],
 > = (args: {
   context: Context;
   event: EventByType<Event, Type>;
@@ -64,7 +64,7 @@ export type TypedReducer<
 export type TypedGuard<
   Context extends StateContext,
   Event extends BaseEvent,
-  Type extends Event['type']
+  Type extends Event['type'],
 > = (args: { context: Context; event: EventByType<Event, Type>; state: string }) => boolean;
 
 /**
@@ -115,6 +115,8 @@ export interface StateConfig<Event extends BaseEvent> {
   on?: OnTransitions<Event>;
   always?: AlwaysTransition[];
   activities?: Array<string | symbol>;
+  onEntry?: Array<string | symbol>;
+  onExit?: Array<string | symbol>;
   initial?: string;
   states?: Record<string, StateConfig<Event>>;
 }

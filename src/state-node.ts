@@ -3,7 +3,7 @@
  * It knows about its structure but not about the overall schema or execution
  */
 
-import type { BaseEvent, GuardRef } from './types';
+import type { GuardRef } from './types';
 
 /**
  * Node kind - determines how children are handled
@@ -39,12 +39,11 @@ export class StateNode {
   // Activities
   private _activities: Array<string | symbol> = [];
 
-  constructor(
-    id: string,
-    key: string,
-    kind: NodeKind,
-    parent: StateNode | null
-  ) {
+  // Entry and exit actions
+  private _onEntry: Array<string | symbol> = [];
+  private _onExit: Array<string | symbol> = [];
+
+  constructor(id: string, key: string, kind: NodeKind, parent: StateNode | null) {
     this.id = id;
     this.key = key;
     this.kind = kind;
@@ -100,6 +99,20 @@ export class StateNode {
   }
 
   /**
+   * Set onEntry actions
+   */
+  setOnEntry(actions: Array<string | symbol>): void {
+    this._onEntry = actions;
+  }
+
+  /**
+   * Set onExit actions
+   */
+  setOnExit(actions: Array<string | symbol>): void {
+    this._onExit = actions;
+  }
+
+  /**
    * Get all children
    */
   get children(): readonly StateNode[] {
@@ -137,8 +150,22 @@ export class StateNode {
   /**
    * Get activities
    */
-  get activities(): readonly Array<string | symbol> {
+  get activities(): ReadonlyArray<string | symbol> {
     return this._activities;
+  }
+
+  /**
+   * Get onEntry actions
+   */
+  get onEntry(): ReadonlyArray<string | symbol> {
+    return this._onEntry;
+  }
+
+  /**
+   * Get onExit actions
+   */
+  get onExit(): ReadonlyArray<string | symbol> {
+    return this._onExit;
   }
 
   /**
