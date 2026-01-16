@@ -825,6 +825,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   /**
    * Select enabled transitions for the given event from the current configuration
    * Returns the first enabled transition for each active atomic state
+   * Deduplicates transitions from shared ancestors (important for parallel states)
    */
   private selectTransitions(
     event: Event,
@@ -838,6 +839,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     );
 
     const selectedTransitions: Array<{ source: StateNode; transition: NodeTransition }> = [];
+    const seenTransitions = new Set<string>(); // Track transitions by definition node ID + transition index
 
     // For each active atomic state, find enabled transition
     for (const atomicNode of atomicNodes) {
@@ -856,7 +858,18 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
         }
 
         // Find first enabled transition
-        for (const transition of transitions) {
+        for (let i = 0; i < transitions.length; i++) {
+          const transition = transitions[i]!;
+
+          // Create a unique key for this transition definition
+          // This prevents duplicate execution when multiple children share a parent transition
+          const transitionKey = `${node.id}:${event.type}:${i}`;
+
+          if (seenTransitions.has(transitionKey)) {
+            this.log(`   ⊗ Skipping duplicate transition from ${node.id} (already selected)`);
+            continue;
+          }
+
           // Check guard if present
           if (transition.guard) {
             if (!this.evaluateGuard(transition.guard, context, event, node.id)) {
@@ -867,12 +880,13 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
           // Found enabled transition
           const targetDesc = transition.targetIds ? transition.targetIds.join(', ') : 'internal';
           this.log(`   ✓ Selected transition: ${node.id} → ${targetDesc}`);
-          selectedTransitions.push({ source: atomicNode, transition });
+          selectedTransitions.push({ source: node, transition }); // Use actual source node, not atomicNode
+          seenTransitions.add(transitionKey);
           break; // Stop at first enabled transition for this source
         }
 
         // If we found a transition, stop checking ancestors
-        if (selectedTransitions.some((t) => t.source === atomicNode)) {
+        if (selectedTransitions.some((t) => t.source === node || node.isDescendantOf(t.source))) {
           break;
         }
       }
@@ -1034,6 +1048,15 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       for (const node of exitSet) {
         newContext = this.deactivateState(node, event, newContext);
         config.delete(node.id);
+
+        // Also remove all descendants of this node from configuration
+        // (Important for parallel states where children remain active)
+        for (const stateId of Array.from(config)) {
+          const stateNode = this.nodesById.get(stateId);
+          if (stateNode && stateNode.isDescendantOf(node)) {
+            config.delete(stateId);
+          }
+        }
       }
 
       // Execute transition assign actions
