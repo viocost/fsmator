@@ -32,6 +32,11 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   // State entry counters for activity tracking
   private stateEntryCounters: Map<string, number> = new Map();
 
+  // Time travel history
+  private timeTravelEnabled: boolean = false;
+  private history: MachineSnapshot<Context>[] = [];
+  private historyIndex: number = -1; // Current position in history (-1 = no history yet)
+
   // Registries
   private guards: Map<string | symbol, Guard<Context, Event>> = new Map();
   private reducers: Map<string | symbol, Reducer<Context, Event>> = new Map();
@@ -42,6 +47,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   constructor(config: StateMachineConfig<Context, Event>) {
     this.context = config.initialContext;
     this.debugEnabled = config.debug ?? false;
+    this.timeTravelEnabled = config.timeTravel ?? false;
 
     // Register guards and reducers
     if (config.guards) {
@@ -85,6 +91,10 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     }
 
     this.started = true;
+
+    // Capture initial state to history
+    this.captureHistory();
+
     return this;
   }
 
@@ -235,6 +245,148 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
         return;
       }
     }
+  }
+
+  /**
+   * Capture current state to history (for time travel)
+   * Called after every transition when timeTravel is enabled
+   */
+  private captureHistory(): void {
+    if (!this.timeTravelEnabled) {
+      return;
+    }
+
+    const snapshot = this.getSnapshot();
+
+    // If we're not at the end of history, truncate everything after current position
+    // This happens when we rewind and then send new events (branching)
+    if (this.historyIndex < this.history.length - 1) {
+      this.history = this.history.slice(0, this.historyIndex + 1);
+      this.log('🌿 History branched - truncated future history');
+    }
+
+    // Add new snapshot
+    this.history.push(snapshot);
+    this.historyIndex = this.history.length - 1;
+
+    this.log(`📸 History captured (index: ${this.historyIndex}, total: ${this.history.length})`);
+  }
+
+  /**
+   * Restore machine state from a history snapshot
+   * @param snapshot - The snapshot to restore
+   */
+  private restoreFromSnapshot(snapshot: MachineSnapshot<Context>): void {
+    this.context = snapshot.context;
+    this.configuration = new Set(snapshot.configuration);
+
+    // Restore state entry counters
+    this.stateEntryCounters.clear();
+    for (const [stateId, counter] of Object.entries(snapshot.stateCounters)) {
+      this.stateEntryCounters.set(stateId, counter);
+    }
+
+    // Check if we're in a final state
+    this.halted = false; // Reset first
+    this.checkFinalStates();
+  }
+
+  /**
+   * Rewind history by the specified number of steps
+   * @param steps - Number of steps to rewind (default: 1)
+   * @returns this for chaining
+   */
+  rewind(steps: number = 1): this {
+    if (!this.timeTravelEnabled) {
+      throw new Error('Time travel not enabled. Set timeTravel: true in config.');
+    }
+
+    if (!this.started) {
+      throw new Error('Cannot rewind: machine not started.');
+    }
+
+    if (this.history.length === 0) {
+      throw new Error('Cannot rewind: no history available.');
+    }
+
+    // Calculate target index
+    const targetIndex = Math.max(0, this.historyIndex - steps);
+    const actualSteps = this.historyIndex - targetIndex;
+
+    if (actualSteps === 0) {
+      this.log('⏪ Already at the beginning of history');
+      return this;
+    }
+
+    this.log(`⏪ Rewinding ${actualSteps} step(s) (from ${this.historyIndex} to ${targetIndex})`);
+
+    // Restore state from history
+    this.historyIndex = targetIndex;
+    const snapshot = this.history[this.historyIndex];
+    if (!snapshot) {
+      throw new Error(`Invalid history state at index ${this.historyIndex}`);
+    }
+    this.restoreFromSnapshot(snapshot);
+
+    this.log(`✅ Rewound to history index ${this.historyIndex}`);
+    return this;
+  }
+
+  /**
+   * Fast-forward history by the specified number of steps
+   * @param steps - Number of steps to fast-forward (default: 1)
+   * @returns this for chaining
+   */
+  ff(steps: number = 1): this {
+    if (!this.timeTravelEnabled) {
+      throw new Error('Time travel not enabled. Set timeTravel: true in config.');
+    }
+
+    if (!this.started) {
+      throw new Error('Cannot fast-forward: machine not started.');
+    }
+
+    if (this.history.length === 0) {
+      throw new Error('Cannot fast-forward: no history available.');
+    }
+
+    // Calculate target index
+    const targetIndex = Math.min(this.history.length - 1, this.historyIndex + steps);
+    const actualSteps = targetIndex - this.historyIndex;
+
+    if (actualSteps === 0) {
+      this.log('⏩ Already at the end of history');
+      return this;
+    }
+
+    this.log(
+      `⏩ Fast-forwarding ${actualSteps} step(s) (from ${this.historyIndex} to ${targetIndex})`
+    );
+
+    // Restore state from history
+    this.historyIndex = targetIndex;
+    const snapshot = this.history[this.historyIndex];
+    if (!snapshot) {
+      throw new Error(`Invalid history state at index ${this.historyIndex}`);
+    }
+    this.restoreFromSnapshot(snapshot);
+
+    this.log(`✅ Fast-forwarded to history index ${this.historyIndex}`);
+    return this;
+  }
+
+  /**
+   * Get current history index (for debugging/testing)
+   */
+  getHistoryIndex(): number {
+    return this.historyIndex;
+  }
+
+  /**
+   * Get history length (for debugging/testing)
+   */
+  getHistoryLength(): number {
+    return this.history.length;
   }
 
   /**
@@ -860,10 +1012,28 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     const selectedTransitions = this.selectTransitions(event, this.configuration, this.context);
 
     // If no transitions are enabled, check always transitions anyway
+    // If no transitions are enabled, check always transitions anyway
     if (selectedTransitions.length === 0) {
       this.log(`   No enabled transitions found`);
+
+      // Store config before always transitions to check if anything changed
+      const configBefore = new Set(this.configuration);
+      const contextBefore = this.context;
+
       // Still need to check always transitions even if no event transitions
       this.evaluateAlwaysTransitions(event);
+      this.checkFinalStates();
+
+      // Only capture history if always transitions actually changed something
+      const configChanged =
+        this.configuration.size !== configBefore.size ||
+        ![...this.configuration].every((id) => configBefore.has(id));
+      const contextChanged = this.context !== contextBefore;
+
+      if (configChanged || contextChanged) {
+        this.captureHistory();
+      }
+
       return;
     }
 
@@ -886,6 +1056,9 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
 
     // Check if we've reached a final state
     this.checkFinalStates();
+
+    // Capture state to history after all transitions complete
+    this.captureHistory();
   }
 
   /**

@@ -144,6 +144,7 @@ export interface StateMachineConfig<Context extends StateContext, Event extends 
   on?: OnTransitions<Event>;
   states: Record<string, StateConfig<Event>>;
   debug?: boolean;
+  timeTravel?: boolean; // Enable time travel (rewind/ff) with history snapshots
 }
 
 /**
