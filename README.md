@@ -154,6 +154,9 @@ console.log(machine.getContext().count); // 1
 
 machine.send({ type: 'RESET' });
 console.log(machine.getContext().count); // 0
+
+// Check current state
+console.log(machine.getStateValue()); // "active"
 ```
 
 ### Hierarchical States with Entry/Exit Actions
@@ -215,10 +218,12 @@ const formConfig: StateMachineConfig<FormContext, FormEvents> = {
 const machine = new StateMachine(formConfig).start();
 // Initial: editing
 // Log: ['editing']
+console.log(machine.getStateValue()); // 'editing'
 
 machine.send({ type: 'SUBMIT' });
 // Now in: submitting.validating
 // Log: ['editing', 'submitting', 'validating']
+console.log(machine.getStateValue()); // { submitting: 'validating' }
 ```
 
 ### Guards for Conditional Transitions
@@ -326,10 +331,14 @@ const mediaConfig: StateMachineConfig<MediaContext, MediaEvents> = {
 
 const machine = new StateMachine(mediaConfig).start();
 // Both player.playback.paused and player.volume.normal are active
+console.log(machine.getStateValue());
+// { player: { playback: 'stopped', volume: 'normal' } }
 
 machine.send({ type: 'PLAY' });
 machine.send({ type: 'VOLUME_UP' });
 // Now: player.playback.playing and player.volume.normal
+console.log(machine.getStateValue());
+// { player: { playback: 'playing', volume: 'normal' } }
 ```
 
 ### Always Transitions (Eventless Transitions)
@@ -624,6 +633,30 @@ Returns the current context (extended state).
 ##### `getActiveStateNodes(): ReadonlySet<string>`
 
 Returns the set of currently active state node IDs.
+
+##### `getStateValue(): StateValue`
+
+Returns the current state value in XState-compatible format.
+
+- **Atomic states**: Returns a string (e.g., `"idle"`)
+- **Compound states**: Returns a nested object (e.g., `{ form: "editing" }`)
+- **Parallel states**: Returns an object with all active regions (e.g., `{ playback: "playing", volume: "muted" }`)
+
+```typescript
+// Atomic state
+const machine = new StateMachine(config).start();
+console.log(machine.getStateValue()); // "idle"
+
+// Compound state
+machine.send({ type: 'START' });
+console.log(machine.getStateValue()); // { form: "editing" }
+
+// Parallel state
+console.log(machine.getStateValue()); // { playback: "playing", volume: "normal" }
+
+// Deeply nested
+console.log(machine.getStateValue()); // { app: { form: { step: "validation" } } }
+```
 
 ##### `getNode(id: string): StateNode | undefined`
 

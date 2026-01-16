@@ -15,6 +15,7 @@ import type {
   ActivityMetadata,
   StateCountersSnapshot,
   MachineSnapshot,
+  StateValue,
 } from './types';
 
 /**
@@ -222,6 +223,62 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    */
   getActiveStateNodes(): ReadonlySet<string> {
     return this.configuration;
+  }
+
+  /**
+   * Get current state value in XState-compatible format
+   * - Atomic states: returns string (e.g., "idle")
+   * - Compound states: returns nested object (e.g., { form: "editing" })
+   * - Parallel states: returns object with all regions (e.g., { playback: "playing", volume: "muted" })
+   */
+  getStateValue(): StateValue {
+    // Start from root and build state value
+    return this.buildStateValue(this.root);
+  }
+
+  /**
+   * Build state value recursively from a node
+   */
+  private buildStateValue(node: StateNode): StateValue {
+    // For root, return value of first active child
+    if (node === this.root) {
+      const activeChild = node.children.find((child) => this.configuration.has(child.id));
+      if (!activeChild) {
+        throw new Error('No active state found');
+      }
+      return this.buildStateValue(activeChild);
+    }
+
+    // For atomic states, return just the key
+    if (node.isAtomic()) {
+      return node.key;
+    }
+
+    // For compound states, find the active child
+    if (node.isCompound()) {
+      const activeChild = node.children.find((child) => this.configuration.has(child.id));
+      if (!activeChild) {
+        // If no child is active, return just the key (edge case)
+        return node.key;
+      }
+      const childValue = this.buildStateValue(activeChild);
+      return { [node.key]: childValue };
+    }
+
+    // For parallel states, return all active regions
+    if (node.isParallel()) {
+      const result: Record<string, StateValue> = {};
+      for (const region of node.regions) {
+        const activeChild = region.children.find((child) => this.configuration.has(child.id));
+        if (activeChild) {
+          result[region.key] = this.buildStateValue(activeChild);
+        }
+      }
+      return { [node.key]: result };
+    }
+
+    // Fallback
+    return node.key;
   }
 
   /**
