@@ -203,7 +203,7 @@ describe('Context Changes Integration (Shopping Cart)', () => {
     machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
     machine.send({ type: 'CHECKOUT' });
 
-    expect(machine.getConfiguration().has('checkout')).toBe(true);
+    expect(machine.getActiveStateNodes().has('checkout')).toBe(true);
   });
 
   it('should reset cart after checkout', () => {
@@ -214,7 +214,7 @@ describe('Context Changes Integration (Shopping Cart)', () => {
     machine.send({ type: 'CHECKOUT' });
     machine.send({ type: 'RESET' });
 
-    expect(machine.getConfiguration().has('browsing')).toBe(true);
+    expect(machine.getActiveStateNodes().has('browsing')).toBe(true);
     expect(machine.getContext().cart).toEqual([]);
     expect(machine.getContext().total).toBe(0);
     expect(machine.getContext().discount).toBe(0);

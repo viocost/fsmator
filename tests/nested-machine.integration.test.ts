@@ -96,7 +96,7 @@ describe('Nested Machine Integration (Form Validation)', () => {
   it('should initialize to idle state', () => {
     const machine = createFormMachine();
 
-    expect(machine.getConfiguration().has('idle')).toBe(true);
+    expect(machine.getActiveStateNodes().has('idle')).toBe(true);
     expect(machine.getContext().submitAttempts).toBe(0);
     expect(machine.getContext().errors).toEqual([]);
   });
@@ -105,7 +105,7 @@ describe('Nested Machine Integration (Form Validation)', () => {
     const machine = createFormMachine();
 
     machine.send({ type: 'EDIT' });
-    expect(machine.getConfiguration().has('editing')).toBe(true);
+    expect(machine.getActiveStateNodes().has('editing')).toBe(true);
   });
 
   it('should enter submitting.validating when submitting', () => {
@@ -114,8 +114,8 @@ describe('Nested Machine Integration (Form Validation)', () => {
     machine.send({ type: 'EDIT' });
     machine.send({ type: 'SUBMIT' });
 
-    expect(machine.getConfiguration().has('submitting')).toBe(true);
-    expect(machine.getConfiguration().has('submitting.validating')).toBe(true);
+    expect(machine.getActiveStateNodes().has('submitting')).toBe(true);
+    expect(machine.getActiveStateNodes().has('submitting.validating')).toBe(true);
     expect(machine.getContext().submitAttempts).toBe(1);
   });
 
@@ -126,11 +126,11 @@ describe('Nested Machine Integration (Form Validation)', () => {
     machine.send({ type: 'SUBMIT' });
     machine.send({ type: 'VALIDATE_SUCCESS' });
 
-    expect(machine.getConfiguration().has('submitting.sending')).toBe(true);
+    expect(machine.getActiveStateNodes().has('submitting.sending')).toBe(true);
 
     machine.send({ type: 'API_SUCCESS' });
 
-    expect(machine.getConfiguration().has('submitting.success')).toBe(true);
+    expect(machine.getActiveStateNodes().has('submitting.success')).toBe(true);
     expect(machine.getContext().submitAttempts).toBe(1);
   });
 
@@ -141,7 +141,7 @@ describe('Nested Machine Integration (Form Validation)', () => {
     machine.send({ type: 'SUBMIT' });
     machine.send({ type: 'VALIDATE_FAIL', errors: ['Invalid email', 'Name required'] });
 
-    expect(machine.getConfiguration().has('submitting.failed')).toBe(true);
+    expect(machine.getActiveStateNodes().has('submitting.failed')).toBe(true);
     expect(machine.getContext().errors).toEqual(['Invalid email', 'Name required']);
   });
 
@@ -153,7 +153,7 @@ describe('Nested Machine Integration (Form Validation)', () => {
     machine.send({ type: 'VALIDATE_SUCCESS' });
     machine.send({ type: 'API_ERROR', error: 'Network error' });
 
-    expect(machine.getConfiguration().has('submitting.failed')).toBe(true);
+    expect(machine.getActiveStateNodes().has('submitting.failed')).toBe(true);
     expect(machine.getContext().errors).toEqual(['Network error']);
   });
 
@@ -164,12 +164,12 @@ describe('Nested Machine Integration (Form Validation)', () => {
     machine.send({ type: 'SUBMIT' });
     machine.send({ type: 'VALIDATE_FAIL', errors: ['Error'] });
 
-    expect(machine.getConfiguration().has('submitting.failed')).toBe(true);
+    expect(machine.getActiveStateNodes().has('submitting.failed')).toBe(true);
 
     machine.send({ type: 'RESET' });
 
-    expect(machine.getConfiguration().has('editing')).toBe(true);
-    expect(machine.getConfiguration().has('submitting')).toBe(false);
+    expect(machine.getActiveStateNodes().has('editing')).toBe(true);
+    expect(machine.getActiveStateNodes().has('submitting')).toBe(false);
   });
 
   it('should reset from success state to idle', () => {
@@ -180,12 +180,12 @@ describe('Nested Machine Integration (Form Validation)', () => {
     machine.send({ type: 'VALIDATE_SUCCESS' });
     machine.send({ type: 'API_SUCCESS' });
 
-    expect(machine.getConfiguration().has('submitting.success')).toBe(true);
+    expect(machine.getActiveStateNodes().has('submitting.success')).toBe(true);
 
     machine.send({ type: 'RESET' });
 
-    expect(machine.getConfiguration().has('idle')).toBe(true);
-    expect(machine.getConfiguration().has('submitting')).toBe(false);
+    expect(machine.getActiveStateNodes().has('idle')).toBe(true);
+    expect(machine.getActiveStateNodes().has('submitting')).toBe(false);
   });
 
   it('should track multiple submission attempts', () => {
@@ -225,7 +225,7 @@ describe('Nested Machine Integration (Form Validation)', () => {
     machine.send({ type: 'VALIDATE_SUCCESS' });
     machine.send({ type: 'API_SUCCESS' });
 
-    expect(machine.getConfiguration().has('submitting.success')).toBe(true);
+    expect(machine.getActiveStateNodes().has('submitting.success')).toBe(true);
     expect(machine.getContext().submitAttempts).toBe(2);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { StateMachine } from './state-machine';
-import type { StateMachineConfig, StateContext, BaseEvent } from './types';
+import { StateMachine } from '../src/state-machine';
+import type { StateMachineConfig, StateContext, BaseEvent } from '../src/types';
 
 interface TestContext extends StateContext {
   log: string[];
@@ -26,7 +26,7 @@ describe('StateMachine Initialization', () => {
     };
 
     const machine = new StateMachine(config).start();
-    const configuration = machine.getConfiguration();
+    const configuration = machine.getActiveStateNodes();
 
     expect(configuration.has('idle')).toBe(true);
     expect(configuration.has('active')).toBe(false);
@@ -76,7 +76,7 @@ describe('StateMachine Initialization', () => {
     };
 
     const machine = new StateMachine(config).start();
-    const configuration = machine.getConfiguration();
+    const configuration = machine.getActiveStateNodes();
     const context = machine.getContext();
 
     expect(configuration.has('parent')).toBe(true);
@@ -113,7 +113,7 @@ describe('StateMachine Initialization', () => {
     };
 
     const machine = new StateMachine(config).start();
-    const configuration = machine.getConfiguration();
+    const configuration = machine.getActiveStateNodes();
     const context = machine.getContext();
 
     expect(configuration.has('parallel')).toBe(true);
@@ -143,11 +143,11 @@ describe('StateMachine.send() - Simple Transitions', () => {
     };
 
     const machine = new StateMachine(config).start();
-    expect(machine.getConfiguration().has('idle')).toBe(true);
+    expect(machine.getActiveStateNodes().has('idle')).toBe(true);
 
     machine.send({ type: 'NEXT' });
 
-    const config2 = machine.getConfiguration();
+    const config2 = machine.getActiveStateNodes();
     expect(config2.has('idle')).toBe(false);
     expect(config2.has('active')).toBe(true);
   });
@@ -224,7 +224,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     const machine = new StateMachine(config).start();
     machine.send({ type: 'NEXT' });
 
-    expect(machine.getConfiguration().has('active')).toBe(true);
+    expect(machine.getActiveStateNodes().has('active')).toBe(true);
   });
 
   it('should block transition with guard when guard returns false', () => {
@@ -248,8 +248,8 @@ describe('StateMachine.send() - Simple Transitions', () => {
     machine.send({ type: 'NEXT' });
 
     // Should remain in idle because guard failed
-    expect(machine.getConfiguration().has('idle')).toBe(true);
-    expect(machine.getConfiguration().has('active')).toBe(false);
+    expect(machine.getActiveStateNodes().has('idle')).toBe(true);
+    expect(machine.getActiveStateNodes().has('active')).toBe(false);
   });
 
   it('should handle internal transition (no target, only assign)', () => {
@@ -272,7 +272,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     machine.send({ type: 'INCREMENT' });
 
     // Should remain in idle
-    expect(machine.getConfiguration().has('idle')).toBe(true);
+    expect(machine.getActiveStateNodes().has('idle')).toBe(true);
     // But context should be updated
     expect(machine.getContext().count).toBe(1);
   });
@@ -316,12 +316,12 @@ describe('StateMachine.send() - Simple Transitions', () => {
     };
 
     const machine = new StateMachine(config).start();
-    const configBefore = new Set(machine.getConfiguration());
+    const configBefore = new Set(machine.getActiveStateNodes());
     const contextBefore = machine.getContext();
 
     machine.send({ type: 'NEXT' });
 
-    expect(machine.getConfiguration()).toEqual(configBefore);
+    expect(machine.getActiveStateNodes()).toEqual(configBefore);
     expect(machine.getContext()).toBe(contextBefore);
   });
 });
@@ -354,11 +354,11 @@ describe('LCA-based Transitions', () => {
     };
 
     const machine = new StateMachine(config).start();
-    expect(machine.getConfiguration().has('a.b')).toBe(true);
+    expect(machine.getActiveStateNodes().has('a.b')).toBe(true);
 
     machine.send({ type: 'NEXT' });
 
-    const configuration = machine.getConfiguration();
+    const configuration = machine.getActiveStateNodes();
     expect(configuration.has('a.b')).toBe(false);
     expect(configuration.has('a.c')).toBe(true);
     expect(configuration.has('a')).toBe(true); // Parent remains active
@@ -408,11 +408,11 @@ describe('LCA-based Transitions', () => {
     };
 
     const machine = new StateMachine(config).start();
-    expect(machine.getConfiguration().has('a.b.c')).toBe(true);
+    expect(machine.getActiveStateNodes().has('a.b.c')).toBe(true);
 
     machine.send({ type: 'GO_TO_C' });
 
-    const configuration = machine.getConfiguration();
+    const configuration = machine.getActiveStateNodes();
     expect(configuration.has('a.b')).toBe(false);
     expect(configuration.has('a.b.c')).toBe(false);
     expect(configuration.has('a.d')).toBe(true);
@@ -455,7 +455,7 @@ describe('LCA-based Transitions', () => {
     const machine = new StateMachine(config).start();
     machine.send({ type: 'NEXT' });
 
-    const configuration = machine.getConfiguration();
+    const configuration = machine.getActiveStateNodes();
     expect(configuration.has('parent')).toBe(false);
     expect(configuration.has('parent.child')).toBe(false);
     expect(configuration.has('other')).toBe(true);
@@ -493,7 +493,7 @@ describe('LCA-based Transitions', () => {
     const machine = new StateMachine(config).start();
     machine.send({ type: 'NEXT' });
 
-    const configuration = machine.getConfiguration();
+    const configuration = machine.getActiveStateNodes();
     expect(configuration.has('idle')).toBe(false);
     expect(configuration.has('parent')).toBe(true);
     expect(configuration.has('parent.child')).toBe(true);

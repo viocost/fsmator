@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { StateMachine } from './state-machine';
-import type { StateMachineConfig, StateContext, BaseEvent } from './types';
+import { StateMachine } from '../src/state-machine';
+import type { StateMachineConfig, StateContext, BaseEvent } from '../src/types';
 
 interface TestContext extends StateContext {
   count: number;

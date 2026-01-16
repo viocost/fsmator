@@ -220,7 +220,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   /**
    * Get current configuration (set of active node IDs)
    */
-  getConfiguration(): ReadonlySet<string> {
+  getActiveStateNodes(): ReadonlySet<string> {
     return this.configuration;
   }
 

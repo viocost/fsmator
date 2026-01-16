@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { StateMachine } from './state-machine';
-import type { StateMachineConfig } from './types';
+import { StateMachine } from '../src/state-machine';
+import type { StateMachineConfig } from '../src/types';
 
 describe('Always Transitions - Integration', () => {
   describe('Form Validation Flow', () => {
@@ -74,7 +74,7 @@ describe('Always Transitions - Integration', () => {
 
       // Try to submit without filling form
       machine.send({ type: 'SUBMIT' });
-      expect(machine.getConfiguration().has('invalid')).toBe(true);
+      expect(machine.getActiveStateNodes().has('invalid')).toBe(true);
 
       // Fill form
       machine.send({ type: 'SET_NAME', value: 'John' });
@@ -84,7 +84,7 @@ describe('Always Transitions - Integration', () => {
       machine.send({ type: 'SUBMIT' });
 
       // Should auto-validate and auto-submit
-      expect(machine.getConfiguration().has('success')).toBe(true);
+      expect(machine.getActiveStateNodes().has('success')).toBe(true);
       expect(machine.getContext().isSubmitted).toBe(true);
     });
   });
@@ -133,7 +133,7 @@ describe('Always Transitions - Integration', () => {
       machine.send({ type: 'START' });
 
       // Should auto-increment and reach complete
-      expect(machine.getConfiguration().has('complete')).toBe(true);
+      expect(machine.getActiveStateNodes().has('complete')).toBe(true);
       expect(machine.getContext().loadingSteps).toBe(3);
     });
   });
@@ -206,16 +206,16 @@ describe('Always Transitions - Integration', () => {
 
       // Try to access admin without auth - should redirect to login
       machine.send({ type: 'GO_ADMIN' });
-      expect(machine.getConfiguration().has('login')).toBe(true);
+      expect(machine.getActiveStateNodes().has('login')).toBe(true);
 
       // Login as regular user
       machine.send({ type: 'LOGIN', isAdmin: false });
       // Should auto-redirect to home after login
-      expect(machine.getConfiguration().has('home')).toBe(true);
+      expect(machine.getActiveStateNodes().has('home')).toBe(true);
 
       // Try to access admin as regular user - should redirect to home
       machine.send({ type: 'GO_ADMIN' });
-      expect(machine.getConfiguration().has('home')).toBe(true);
+      expect(machine.getActiveStateNodes().has('home')).toBe(true);
 
       // Logout, then login as admin
       machine.send({ type: 'LOGOUT' });
@@ -225,13 +225,13 @@ describe('Always Transitions - Integration', () => {
       machine.send({ type: 'LOGIN', isAdmin: true });
 
       // Should be at home after login
-      expect(machine.getConfiguration().has('home')).toBe(true);
+      expect(machine.getActiveStateNodes().has('home')).toBe(true);
       expect(machine.getContext().isAuthenticated).toBe(true);
       expect(machine.getContext().isAdmin).toBe(true);
 
       // Now try admin - should work
       machine.send({ type: 'GO_ADMIN' });
-      expect(machine.getConfiguration().has('admin')).toBe(true);
+      expect(machine.getActiveStateNodes().has('admin')).toBe(true);
     });
   });
 
@@ -292,7 +292,7 @@ describe('Always Transitions - Integration', () => {
       // With both options disabled, should skip directly to payment
       machine.send({ type: 'NEXT' });
 
-      expect(machine.getConfiguration().has('payment')).toBe(true);
+      expect(machine.getActiveStateNodes().has('payment')).toBe(true);
     });
   });
 
@@ -329,12 +329,12 @@ describe('Always Transitions - Integration', () => {
 
       const machine = new StateMachine(config).start();
 
-      expect(machine.getConfiguration().has('green')).toBe(true);
+      expect(machine.getActiveStateNodes().has('green')).toBe(true);
 
       // Transition to yellow should immediately transition to red
       machine.send({ type: 'TIMER' });
 
-      expect(machine.getConfiguration().has('red')).toBe(true);
+      expect(machine.getActiveStateNodes().has('red')).toBe(true);
     });
   });
 
@@ -381,7 +381,7 @@ describe('Always Transitions - Integration', () => {
       machine.send({ type: 'START' });
 
       // Should auto-process through step2 and step3 to done
-      expect(machine.getConfiguration().has('app.workflow.done')).toBe(true);
+      expect(machine.getActiveStateNodes().has('app.workflow.done')).toBe(true);
     });
   });
 });

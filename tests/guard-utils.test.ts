@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { and, or, not, type GuardRef } from './types';
+import { and, or, not, type GuardRef } from '../src/types';
 
 describe('Guard Utility Functions', () => {
   describe('and', () => {

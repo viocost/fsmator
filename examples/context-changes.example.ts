@@ -143,6 +143,6 @@ export function runContextChangesExample() {
   machine.send({ type: 'CHECKOUT' });
 
   console.log('\n--- Final State ---');
-  console.log('Configuration:', Array.from(machine.getConfiguration()));
+  console.log('Configuration:', Array.from(machine.getActiveStateNodes()));
   console.log('Context:', machine.getContext());
 }

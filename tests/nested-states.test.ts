@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { StateValue, StateMachineConfig, StateContext, BaseEvent } from './types';
+import type { StateValue, StateMachineConfig, StateContext, BaseEvent } from '../src/types';
 
 describe('Nested States', () => {
   describe('StateValue type', () => {

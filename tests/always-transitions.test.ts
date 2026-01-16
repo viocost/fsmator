@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { StateMachine } from './state-machine';
-import type { StateMachineConfig } from './types';
+import { StateMachine } from '../src/state-machine';
+import type { StateMachineConfig } from '../src/types';
 
 describe('Always Transitions', () => {
   describe('Basic Always Transitions', () => {
@@ -23,8 +23,8 @@ describe('Always Transitions', () => {
       const machine = new StateMachine(config).start();
 
       // Should immediately transition to ready due to always transition
-      expect(machine.getConfiguration().has('ready')).toBe(true);
-      expect(machine.getConfiguration().has('checking')).toBe(false);
+      expect(machine.getActiveStateNodes().has('ready')).toBe(true);
+      expect(machine.getActiveStateNodes().has('checking')).toBe(false);
     });
 
     it('should take always transition after event transition', () => {
@@ -44,13 +44,13 @@ describe('Always Transitions', () => {
 
       const machine = new StateMachine(config).start();
 
-      expect(machine.getConfiguration().has('idle')).toBe(true);
+      expect(machine.getActiveStateNodes().has('idle')).toBe(true);
 
       machine.send({ type: 'START' });
 
       // Should transition to processing, then immediately to done
-      expect(machine.getConfiguration().has('done')).toBe(true);
-      expect(machine.getConfiguration().has('processing')).toBe(false);
+      expect(machine.getActiveStateNodes().has('done')).toBe(true);
+      expect(machine.getActiveStateNodes().has('processing')).toBe(false);
     });
 
     it('should not take always transition when guard fails', () => {
@@ -85,8 +85,8 @@ describe('Always Transitions', () => {
       machine.send({ type: 'START' });
 
       // Should stay in waiting because guard fails (count < 3)
-      expect(machine.getConfiguration().has('waiting')).toBe(true);
-      expect(machine.getConfiguration().has('done')).toBe(false);
+      expect(machine.getActiveStateNodes().has('waiting')).toBe(true);
+      expect(machine.getActiveStateNodes().has('done')).toBe(false);
     });
 
     it('should take always transition when guard passes', () => {
@@ -115,8 +115,8 @@ describe('Always Transitions', () => {
       machine.send({ type: 'START' });
 
       // Should transition to done because guard passes (count >= 3)
-      expect(machine.getConfiguration().has('done')).toBe(true);
-      expect(machine.getConfiguration().has('waiting')).toBe(false);
+      expect(machine.getActiveStateNodes().has('done')).toBe(true);
+      expect(machine.getActiveStateNodes().has('waiting')).toBe(false);
     });
   });
 
@@ -154,7 +154,7 @@ describe('Always Transitions', () => {
       machine.send({ type: 'START' });
 
       // Should transition to medium (first guard that passes)
-      expect(machine.getConfiguration().has('medium')).toBe(true);
+      expect(machine.getActiveStateNodes().has('medium')).toBe(true);
     });
 
     it('should take fallback always transition when no guards pass', () => {
@@ -187,7 +187,7 @@ describe('Always Transitions', () => {
       machine.send({ type: 'START' });
 
       // Should transition to unknown (fallback)
-      expect(machine.getConfiguration().has('unknown')).toBe(true);
+      expect(machine.getActiveStateNodes().has('unknown')).toBe(true);
     });
   });
 
@@ -216,7 +216,7 @@ describe('Always Transitions', () => {
 
       machine.send({ type: 'START' });
 
-      expect(machine.getConfiguration().has('done')).toBe(true);
+      expect(machine.getActiveStateNodes().has('done')).toBe(true);
       expect(machine.getContext().count).toBe(1);
     });
 
@@ -249,7 +249,7 @@ describe('Always Transitions', () => {
       machine.send({ type: 'START' });
 
       // Should loop through incrementing until count >= 3
-      expect(machine.getConfiguration().has('done')).toBe(true);
+      expect(machine.getActiveStateNodes().has('done')).toBe(true);
       expect(machine.getContext().count).toBe(3);
     });
   });
@@ -324,8 +324,8 @@ describe('Always Transitions', () => {
       const machine = new StateMachine(config).start();
 
       // Should immediately transition to parent.ready
-      expect(machine.getConfiguration().has('parent.ready')).toBe(true);
-      expect(machine.getConfiguration().has('parent.checking')).toBe(false);
+      expect(machine.getActiveStateNodes().has('parent.ready')).toBe(true);
+      expect(machine.getActiveStateNodes().has('parent.checking')).toBe(false);
     });
 
     it('should transition from nested state to parent level via always', () => {
@@ -354,8 +354,8 @@ describe('Always Transitions', () => {
       const machine = new StateMachine(config).start();
 
       // Should transition from parent.child to sibling
-      expect(machine.getConfiguration().has('sibling')).toBe(true);
-      expect(machine.getConfiguration().has('parent')).toBe(false);
+      expect(machine.getActiveStateNodes().has('sibling')).toBe(true);
+      expect(machine.getActiveStateNodes().has('parent')).toBe(false);
     });
   });
 
@@ -382,8 +382,8 @@ describe('Always Transitions', () => {
       const machine = new StateMachine(config).start();
 
       // Parent's always transition should fire, exiting to done
-      expect(machine.getConfiguration().has('done')).toBe(true);
-      expect(machine.getConfiguration().has('parent')).toBe(false);
+      expect(machine.getActiveStateNodes().has('done')).toBe(true);
+      expect(machine.getActiveStateNodes().has('parent')).toBe(false);
     });
   });
 
@@ -413,7 +413,7 @@ describe('Always Transitions', () => {
       machine.send({ type: 'START' });
 
       // Should stay in active but increment context once
-      expect(machine.getConfiguration().has('active')).toBe(true);
+      expect(machine.getActiveStateNodes().has('active')).toBe(true);
       expect(machine.getContext().count).toBe(1);
     });
   });
@@ -443,7 +443,7 @@ describe('Always Transitions', () => {
       const machine = new StateMachine(config).start();
 
       // Should chain through all steps to final
-      expect(machine.getConfiguration().has('final')).toBe(true);
+      expect(machine.getActiveStateNodes().has('final')).toBe(true);
       expect(machine.getContext().step).toBe(4);
     });
 
@@ -485,7 +485,7 @@ describe('Always Transitions', () => {
       // Sending NEXT should not trigger any transition
       machine.send({ type: 'NEXT' });
 
-      expect(machine.getConfiguration().has('idle')).toBe(true);
+      expect(machine.getActiveStateNodes().has('idle')).toBe(true);
     });
   });
 });

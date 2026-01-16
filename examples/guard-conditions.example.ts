@@ -203,6 +203,6 @@ export function runGuardConditionsExample() {
   machine.send({ type: 'UNLOCK' });
 
   console.log('\n--- Final State ---');
-  console.log('Configuration:', Array.from(machine.getConfiguration()));
+  console.log('Configuration:', Array.from(machine.getActiveStateNodes()));
   console.log('Context:', machine.getContext());
 }

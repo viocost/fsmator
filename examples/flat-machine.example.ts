@@ -19,15 +19,22 @@ export function runFlatMachineExample() {
 
   const config: StateMachineConfig<TrafficLightContext, TrafficLightEvent> = {
     initial: 'red',
-    debug: true,
+    debug: false,
+    timeTravel: true,
     initialContext: {
       cycleCount: 0,
     },
     states: {
       red: {
+        type: 'parallel',
         on: {
           NEXT: { target: 'yellow', assign: 'incrementCycle' },
         },
+        states: {
+          dummyOne: {},
+          dummyTwo: {}
+
+        }
       },
       yellow: {
         on: {
@@ -47,19 +54,27 @@ export function runFlatMachineExample() {
     },
   };
 
-  const machine = new StateMachine(config);
+  const machine = new StateMachine(config).start();
 
+  console.log('state counters', machine.getStateCounters())
   console.log('\n--- Cycling through lights ---');
   machine.send({ type: 'NEXT' }); // red → yellow
+
+  console.log('state counters', machine.getStateCounters())
   machine.send({ type: 'NEXT' }); // yellow → green
+
+  console.log('state counters', machine.getStateCounters())
   machine.send({ type: 'NEXT' }); // green → red (increments cycle)
 
+  console.log('state counters', machine.getStateCounters())
   console.log('\n--- Reset cycle ---');
   machine.send({ type: 'NEXT' }); // red → yellow
   machine.send({ type: 'NEXT' }); // yellow → green
   machine.send({ type: 'RESET' }); // green → red (resets cycle)
 
-  console.log('\n--- Final State ---');
-  console.log('Configuration:', Array.from(machine.getConfiguration()));
+
+
+  console.log('Configuration:', Array.from(machine.getActiveStateNodes()));
   console.log('Context:', machine.getContext());
+  console.log('state counters', machine.getStateCounters())
 }

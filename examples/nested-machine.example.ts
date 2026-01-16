@@ -143,6 +143,6 @@ export function runNestedMachineExample() {
   machine.send({ type: 'VALIDATE_FAIL', errors: ['Invalid email'] });
 
   console.log('\n--- Final State ---');
-  console.log('Configuration:', Array.from(machine.getConfiguration()));
+  console.log('Configuration:', Array.from(machine.getActiveStateNodes()));
   console.log('Context:', machine.getContext());
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { StateMachine } from './state-machine';
-import type { StateMachineConfig } from './types';
+import { StateMachine } from '../src/state-machine';
+import type { StateMachineConfig } from '../src/types';
 
 describe('Time Travel', () => {
   describe('Configuration', () => {
@@ -155,7 +155,7 @@ describe('Time Travel', () => {
       machine.rewind(100); // Rewind more than history length
       expect(machine.getContext().count).toBe(0);
       expect(machine.getHistoryIndex()).toBe(0);
-      expect(machine.getConfiguration()).toEqual(new Set(['active']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['active']));
     });
 
     it('should not rewind beyond beginning', () => {
@@ -305,19 +305,19 @@ describe('Time Travel', () => {
       };
 
       const machine = new StateMachine(config).start();
-      expect(machine.getConfiguration()).toEqual(new Set(['a']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['a']));
 
       machine.send({ type: 'NEXT' }); // a -> b
-      expect(machine.getConfiguration()).toEqual(new Set(['b']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['b']));
 
       machine.send({ type: 'NEXT' }); // b -> c
-      expect(machine.getConfiguration()).toEqual(new Set(['c']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['c']));
 
       machine.rewind(2); // Back to a
-      expect(machine.getConfiguration()).toEqual(new Set(['a']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['a']));
 
       machine.ff(); // Forward to b
-      expect(machine.getConfiguration()).toEqual(new Set(['b']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['b']));
     });
 
     it('should restore nested state configuration', () => {
@@ -340,13 +340,13 @@ describe('Time Travel', () => {
       };
 
       const machine = new StateMachine(config).start();
-      expect(machine.getConfiguration()).toEqual(new Set(['parent', 'parent.child1']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['parent', 'parent.child1']));
 
       machine.send({ type: 'NEXT' });
-      expect(machine.getConfiguration()).toEqual(new Set(['parent', 'parent.child2']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['parent', 'parent.child2']));
 
       machine.rewind();
-      expect(machine.getConfiguration()).toEqual(new Set(['parent', 'parent.child1']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['parent', 'parent.child1']));
     });
   });
 
@@ -584,15 +584,15 @@ describe('Time Travel', () => {
       machine.send({ type: 'INC' }); // count = 3, state = b
 
       expect(machine.getContext().count).toBe(3);
-      expect(machine.getConfiguration()).toEqual(new Set(['b']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['b']));
 
       machine.rewind(2); // Back to count = 1, state = b
       expect(machine.getContext().count).toBe(1);
-      expect(machine.getConfiguration()).toEqual(new Set(['b']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['b']));
 
       machine.rewind(); // Back to count = 1, state = a
       expect(machine.getContext().count).toBe(1);
-      expect(machine.getConfiguration()).toEqual(new Set(['a']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['a']));
     });
 
     it('should handle always transitions in history', () => {
@@ -636,17 +636,17 @@ describe('Time Travel', () => {
       const machine = new StateMachine(config).start();
 
       machine.send({ type: 'SET', value: 10 }); // -> checking -> low
-      expect(machine.getConfiguration()).toEqual(new Set(['low']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['low']));
 
       machine.send({ type: 'SET', value: 90 }); // -> checking -> high
-      expect(machine.getConfiguration()).toEqual(new Set(['high']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['high']));
 
       machine.rewind(); // Back to low
-      expect(machine.getConfiguration()).toEqual(new Set(['low']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['low']));
       expect(machine.getContext().value).toBe(10);
 
       machine.ff(); // Forward to high
-      expect(machine.getConfiguration()).toEqual(new Set(['high']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['high']));
       expect(machine.getContext().value).toBe(90);
     });
 
@@ -674,15 +674,15 @@ describe('Time Travel', () => {
 
       machine.send({ type: 'FINISH' });
       expect(machine.isHalted()).toBe(true);
-      expect(machine.getConfiguration()).toEqual(new Set(['done']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['done']));
 
       machine.rewind(); // Back to running
       expect(machine.isHalted()).toBe(false);
-      expect(machine.getConfiguration()).toEqual(new Set(['running']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['running']));
 
       machine.ff(); // Forward to done
       expect(machine.isHalted()).toBe(true);
-      expect(machine.getConfiguration()).toEqual(new Set(['done']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['done']));
     });
 
     it('should work with parallel states', () => {
@@ -718,7 +718,7 @@ describe('Time Travel', () => {
 
       const machine = new StateMachine(config).start();
 
-      const initialConfig = machine.getConfiguration();
+      const initialConfig = machine.getActiveStateNodes();
       expect(initialConfig).toEqual(
         new Set([
           'parallel',
@@ -732,7 +732,7 @@ describe('Time Travel', () => {
       machine.send({ type: 'TOGGLE_A' }); // a1 -> a2
       machine.send({ type: 'TOGGLE_B' }); // b1 -> b2
 
-      expect(machine.getConfiguration()).toEqual(
+      expect(machine.getActiveStateNodes()).toEqual(
         new Set([
           'parallel',
           'parallel.regionA',
@@ -743,10 +743,10 @@ describe('Time Travel', () => {
       );
 
       machine.rewind(2); // Back to initial
-      expect(machine.getConfiguration()).toEqual(initialConfig);
+      expect(machine.getActiveStateNodes()).toEqual(initialConfig);
 
       machine.ff(); // Forward one
-      expect(machine.getConfiguration()).toEqual(
+      expect(machine.getActiveStateNodes()).toEqual(
         new Set([
           'parallel',
           'parallel.regionA',

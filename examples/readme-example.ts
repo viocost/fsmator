@@ -99,7 +99,7 @@ console.log('Initial log:', formMachine.getContext().log); // ['editing']
 
 formMachine.send({ type: 'SUBMIT' });
 console.log('After submit:', formMachine.getContext().log); // ['editing', 'submitting', 'validating']
-console.log('Configuration:', Array.from(formMachine.getConfiguration())); // ['submitting', 'submitting.validating']
+console.log('Configuration:', Array.from(formMachine.getActiveStateNodes())); // ['submitting', 'submitting.validating']
 
 formMachine.send({ type: 'SUCCESS' });
 console.log('After success:', formMachine.getContext().log); // ['editing', 'submitting', 'validating', 'success']

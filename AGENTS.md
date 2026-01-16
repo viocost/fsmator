@@ -148,7 +148,7 @@ describe('StateMachine', () => {
       const machine = new StateMachine(config);
 
       // Assert
-      expect(machine.getConfiguration().has('idle')).toBe(true);
+      expect(machine.getActiveStateNodes().has('idle')).toBe(true);
     });
   });
 });

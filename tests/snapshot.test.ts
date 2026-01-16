@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { StateMachine } from './state-machine';
-import type { StateMachineConfig, MachineSnapshot } from './types';
+import { StateMachine } from '../src/state-machine';
+import type { StateMachineConfig, MachineSnapshot } from '../src/types';
 
 describe('Snapshot Dump and Load', () => {
   describe('Basic Dump/Load', () => {
@@ -39,7 +39,7 @@ describe('Snapshot Dump and Load', () => {
 
       // Verify state matches
       expect(machine2.getContext()).toEqual({ count: 2 });
-      expect(machine2.getConfiguration()).toEqual(new Set(['active']));
+      expect(machine2.getActiveStateNodes()).toEqual(new Set(['active']));
     });
 
     it('should preserve context after dump/load', () => {
@@ -87,7 +87,7 @@ describe('Snapshot Dump and Load', () => {
       const json = machine1.dump();
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
 
-      expect(machine2.getConfiguration()).toEqual(new Set(['b']));
+      expect(machine2.getActiveStateNodes()).toEqual(new Set(['b']));
     });
 
     it('should preserve state entry counters after dump/load', () => {
@@ -321,7 +321,7 @@ describe('Snapshot Dump and Load', () => {
       const json = machine1.dump();
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
 
-      expect(machine2.getConfiguration()).toEqual(
+      expect(machine2.getActiveStateNodes()).toEqual(
         new Set(['menu', 'menu.settings', 'menu.settings.advanced'])
       );
     });
@@ -371,7 +371,7 @@ describe('Snapshot Dump and Load', () => {
       const json = machine1.dump();
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
 
-      expect(machine2.getConfiguration()).toEqual(
+      expect(machine2.getActiveStateNodes()).toEqual(
         new Set(['editor', 'editor.bold', 'editor.bold.on', 'editor.italic', 'editor.italic.on'])
       );
     });
@@ -407,7 +407,7 @@ describe('Snapshot Dump and Load', () => {
       // Check state counters after load - should be preserved
       const counters2 = machine2.getStateCounters();
       expect(counters2['active']).toBe(1);
-      expect(machine2.getConfiguration()).toEqual(new Set(['active']));
+      expect(machine2.getActiveStateNodes()).toEqual(new Set(['active']));
 
       // Restart activity to check counter increments
       machine2.send({ type: 'STOP' });
@@ -455,11 +455,11 @@ describe('Snapshot Dump and Load', () => {
       const json = machine1.dump();
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
 
-      expect(machine2.getConfiguration()).toEqual(new Set(['high']));
+      expect(machine2.getActiveStateNodes()).toEqual(new Set(['high']));
 
       // Send event after load - should trigger always transitions
       machine2.send({ type: 'SET', value: 10 });
-      expect(machine2.getConfiguration()).toEqual(new Set(['low']));
+      expect(machine2.getActiveStateNodes()).toEqual(new Set(['low']));
     });
 
     it('should handle multiple dump/load cycles', () => {
@@ -553,7 +553,7 @@ describe('Snapshot Dump and Load', () => {
       const machine2 = new StateMachine(config).load(snapshot);
 
       expect(machine2.getContext()).toEqual(machine1.getContext());
-      expect(machine2.getConfiguration()).toEqual(machine1.getConfiguration());
+      expect(machine2.getActiveStateNodes()).toEqual(machine1.getActiveStateNodes());
     });
 
     it('should handle special characters in context', () => {
@@ -614,7 +614,7 @@ describe('Snapshot Dump and Load', () => {
       expect(machine2.getContext().count).toBe(3);
 
       machine2.send({ type: 'RESET' });
-      expect(machine2.getConfiguration()).toEqual(new Set(['idle']));
+      expect(machine2.getActiveStateNodes()).toEqual(new Set(['idle']));
     });
 
     it('should evaluate always transitions immediately after load', () => {
@@ -646,7 +646,7 @@ describe('Snapshot Dump and Load', () => {
       // Load and start should trigger always transition
       const machine = new StateMachine(config).load(snapshot).start();
 
-      expect(machine.getConfiguration()).toEqual(new Set(['ready']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['ready']));
     });
 
     it('should track state counters correctly after load', () => {
@@ -682,7 +682,7 @@ describe('Snapshot Dump and Load', () => {
       const counters = machine2.getStateCounters();
 
       expect(counters['running']).toBe(2); // First entry + restart
-      expect(machine2.getConfiguration()).toEqual(new Set(['running']));
+      expect(machine2.getActiveStateNodes()).toEqual(new Set(['running']));
     });
 
     it('should handle entry/exit actions correctly after load', () => {
@@ -797,12 +797,12 @@ describe('Snapshot Dump and Load', () => {
       const machine = new StateMachine(config).start();
 
       expect(machine.isHalted()).toBe(false);
-      expect(machine.getConfiguration()).toEqual(new Set(['running']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['running']));
 
       machine.send({ type: 'FINISH' });
 
       expect(machine.isHalted()).toBe(true);
-      expect(machine.getConfiguration()).toEqual(new Set(['done']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['done']));
     });
 
     it('should ignore events when machine is halted', () => {
@@ -841,7 +841,7 @@ describe('Snapshot Dump and Load', () => {
       machine.send({ type: 'INCREMENT' });
 
       expect(machine.getContext().count).toBe(1); // Still 1
-      expect(machine.getConfiguration()).toEqual(new Set(['done'])); // Still in done
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['done'])); // Still in done
     });
 
     it('should detect final state immediately on initialization', () => {
@@ -861,7 +861,7 @@ describe('Snapshot Dump and Load', () => {
       const machine = new StateMachine(config).start();
 
       expect(machine.isHalted()).toBe(true);
-      expect(machine.getConfiguration()).toEqual(new Set(['done']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['done']));
     });
 
     it('should detect final state after always transition', () => {
@@ -887,7 +887,7 @@ describe('Snapshot Dump and Load', () => {
       const machine = new StateMachine(config).start();
 
       expect(machine.isHalted()).toBe(true);
-      expect(machine.getConfiguration()).toEqual(new Set(['done']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['done']));
     });
 
     it('should dump and load halted state correctly', () => {
@@ -916,11 +916,11 @@ describe('Snapshot Dump and Load', () => {
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
 
       expect(machine2.isHalted()).toBe(true);
-      expect(machine2.getConfiguration()).toEqual(new Set(['done']));
+      expect(machine2.getActiveStateNodes()).toEqual(new Set(['done']));
 
       // Should ignore events
       machine2.send({ type: 'FINISH' });
-      expect(machine2.getConfiguration()).toEqual(new Set(['done']));
+      expect(machine2.getActiveStateNodes()).toEqual(new Set(['done']));
     });
 
     it('should work with nested final states', () => {
@@ -952,7 +952,7 @@ describe('Snapshot Dump and Load', () => {
       machine.send({ type: 'COMPLETE' });
 
       expect(machine.isHalted()).toBe(true);
-      expect(machine.getConfiguration()).toEqual(new Set(['parent', 'parent.finished']));
+      expect(machine.getActiveStateNodes()).toEqual(new Set(['parent', 'parent.finished']));
     });
   });
 });

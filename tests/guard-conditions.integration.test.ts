@@ -142,7 +142,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
   it('should initialize to loggedOut state', () => {
     const machine = createAuthMachine();
 
-    expect(machine.getConfiguration().has('loggedOut')).toBe(true);
+    expect(machine.getActiveStateNodes().has('loggedOut')).toBe(true);
     expect(machine.getContext().loginAttempts).toBe(0);
     expect(machine.getContext().isLocked).toBe(false);
   });
@@ -152,7 +152,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
 
     machine.send({ type: 'SUBMIT' });
 
-    expect(machine.getConfiguration().has('loggedOut')).toBe(true);
+    expect(machine.getActiveStateNodes().has('loggedOut')).toBe(true);
     expect(machine.getContext().loginAttempts).toBe(1);
   });
 
@@ -162,7 +162,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
     machine.send({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'secret' });
     machine.send({ type: 'SUBMIT' });
 
-    expect(machine.getConfiguration().has('authenticating')).toBe(true);
+    expect(machine.getActiveStateNodes().has('authenticating')).toBe(true);
   });
 
   it('should complete successful login', () => {
@@ -172,7 +172,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
     machine.send({ type: 'SUBMIT' });
     machine.send({ type: 'SUCCESS', token: 'abc123' });
 
-    expect(machine.getConfiguration().has('loggedIn')).toBe(true);
+    expect(machine.getActiveStateNodes().has('loggedIn')).toBe(true);
     expect(machine.getContext().sessionToken).toBe('abc123');
     expect(machine.getContext().loginAttempts).toBe(0);
   });
@@ -185,7 +185,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
     machine.send({ type: 'SUCCESS', token: 'abc123' });
     machine.send({ type: 'LOGOUT' });
 
-    expect(machine.getConfiguration().has('loggedOut')).toBe(true);
+    expect(machine.getActiveStateNodes().has('loggedOut')).toBe(true);
     expect(machine.getContext().sessionToken).toBeNull();
     expect(machine.getContext().username).toBe('');
   });
@@ -197,7 +197,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
     machine.send({ type: 'SUBMIT' });
     machine.send({ type: 'FAILURE' });
 
-    expect(machine.getConfiguration().has('loggedOut')).toBe(true);
+    expect(machine.getActiveStateNodes().has('loggedOut')).toBe(true);
     expect(machine.getContext().loginAttempts).toBe(1);
   });
 
@@ -221,7 +221,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
     machine.send({ type: 'SUBMIT' });
     machine.send({ type: 'FAILURE' });
 
-    expect(machine.getConfiguration().has('locked')).toBe(true);
+    expect(machine.getActiveStateNodes().has('locked')).toBe(true);
     expect(machine.getContext().isLocked).toBe(true);
     expect(machine.getContext().loginAttempts).toBe(3);
   });
@@ -240,14 +240,14 @@ describe('Guard Conditions Integration (Authentication)', () => {
     machine.send({ type: 'SUBMIT' });
     machine.send({ type: 'FAILURE' });
 
-    expect(machine.getConfiguration().has('locked')).toBe(true);
+    expect(machine.getActiveStateNodes().has('locked')).toBe(true);
 
     // Try to submit with correct credentials
     machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'correct' });
     machine.send({ type: 'SUBMIT' });
 
     // Should remain locked
-    expect(machine.getConfiguration().has('locked')).toBe(true);
+    expect(machine.getActiveStateNodes().has('locked')).toBe(true);
   });
 
   it('should unlock account and reset attempts', () => {
@@ -267,7 +267,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
     // Unlock
     machine.send({ type: 'UNLOCK' });
 
-    expect(machine.getConfiguration().has('loggedOut')).toBe(true);
+    expect(machine.getActiveStateNodes().has('loggedOut')).toBe(true);
     expect(machine.getContext().isLocked).toBe(false);
     expect(machine.getContext().loginAttempts).toBe(0);
     expect(machine.getContext().username).toBe('');
@@ -293,7 +293,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
     machine.send({ type: 'SUBMIT' });
     machine.send({ type: 'SUCCESS', token: 'xyz789' });
 
-    expect(machine.getConfiguration().has('loggedIn')).toBe(true);
+    expect(machine.getActiveStateNodes().has('loggedIn')).toBe(true);
     expect(machine.getContext().sessionToken).toBe('xyz789');
   });
 
@@ -309,7 +309,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
     machine.send({ type: 'SUBMIT' });
 
     // Should go to locked, not authenticating
-    expect(machine.getConfiguration().has('locked')).toBe(true);
+    expect(machine.getActiveStateNodes().has('locked')).toBe(true);
   });
 
   it('should reject login without valid token', () => {
@@ -322,7 +322,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
     machine.send({ type: 'SUCCESS', token: '' });
 
     // Should remain in authenticating
-    expect(machine.getConfiguration().has('authenticating')).toBe(true);
+    expect(machine.getActiveStateNodes().has('authenticating')).toBe(true);
   });
 
   it('should handle complete authentication flow with retry', () => {
@@ -339,7 +339,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
     machine.send({ type: 'SUBMIT' });
     machine.send({ type: 'SUCCESS', token: 'token123' });
 
-    expect(machine.getConfiguration().has('loggedIn')).toBe(true);
+    expect(machine.getActiveStateNodes().has('loggedIn')).toBe(true);
     expect(machine.getContext().sessionToken).toBe('token123');
     expect(machine.getContext().loginAttempts).toBe(0); // Reset on success
   });

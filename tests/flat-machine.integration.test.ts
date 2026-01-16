@@ -50,7 +50,7 @@ describe('Flat Machine Integration (Traffic Light)', () => {
   it('should initialize to red state', () => {
     const machine = createTrafficLightMachine();
 
-    expect(machine.getConfiguration().has('red')).toBe(true);
+    expect(machine.getActiveStateNodes().has('red')).toBe(true);
     expect(machine.getContext().cycleCount).toBe(0);
   });
 
@@ -59,17 +59,17 @@ describe('Flat Machine Integration (Traffic Light)', () => {
 
     // red → yellow
     machine.send({ type: 'NEXT' });
-    expect(machine.getConfiguration().has('yellow')).toBe(true);
+    expect(machine.getActiveStateNodes().has('yellow')).toBe(true);
     expect(machine.getContext().cycleCount).toBe(1);
 
     // yellow → green
     machine.send({ type: 'NEXT' });
-    expect(machine.getConfiguration().has('green')).toBe(true);
+    expect(machine.getActiveStateNodes().has('green')).toBe(true);
     expect(machine.getContext().cycleCount).toBe(1);
 
     // green → red
     machine.send({ type: 'NEXT' });
-    expect(machine.getConfiguration().has('red')).toBe(true);
+    expect(machine.getActiveStateNodes().has('red')).toBe(true);
     expect(machine.getContext().cycleCount).toBe(1);
   });
 
@@ -104,7 +104,7 @@ describe('Flat Machine Integration (Traffic Light)', () => {
 
     // Reset from green
     machine.send({ type: 'RESET' });
-    expect(machine.getConfiguration().has('red')).toBe(true);
+    expect(machine.getActiveStateNodes().has('red')).toBe(true);
     expect(machine.getContext().cycleCount).toBe(0);
   });
 
@@ -126,7 +126,7 @@ describe('Flat Machine Integration (Traffic Light)', () => {
     machine.send({ type: 'NEXT' }); // yellow → green
     machine.send({ type: 'NEXT' }); // green → red
 
-    expect(machine.getConfiguration().has('red')).toBe(true);
+    expect(machine.getActiveStateNodes().has('red')).toBe(true);
     expect(machine.getContext().cycleCount).toBe(3);
   });
 });

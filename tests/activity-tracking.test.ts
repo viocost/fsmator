@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { StateMachine } from './state-machine';
-import type { StateMachineConfig, ActivityMetadata } from './types';
+import { StateMachine } from '../src/state-machine';
+import type { StateMachineConfig, ActivityMetadata } from '../src/types';
 
 describe('Activity Tracking', () => {
   describe('State Entry Counters', () => {
@@ -579,7 +579,7 @@ describe('Activity Tracking', () => {
 
       expect(machine2.getStateCounters()).toEqual(snapshot.stateCounters);
       expect(machine2.getContext()).toEqual(snapshot.context);
-      expect(Array.from(machine2.getConfiguration())).toEqual(snapshot.configuration);
+      expect(Array.from(machine2.getActiveStateNodes())).toEqual(snapshot.configuration);
     });
 
     it('should maintain activity relevance after restore', () => {

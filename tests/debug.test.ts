@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { StateMachine } from './state-machine';
-import type { StateMachineConfig } from './types';
+import { StateMachine } from '../src/state-machine';
+import type { StateMachineConfig } from '../src/types';
 
 describe('Debug Logging', () => {
   let consoleLogSpy: any;
