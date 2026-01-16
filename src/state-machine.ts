@@ -12,6 +12,9 @@ import type {
   Reducer,
   StateConfig,
   GuardRef,
+  ActivityMetadata,
+  StateCountersSnapshot,
+  MachineSnapshot,
 } from './types';
 
 /**
@@ -23,6 +26,9 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   private configuration: Set<string> = new Set();
   private debugEnabled: boolean = false;
 
+  // State entry counters for activity tracking
+  private stateEntryCounters: Map<string, number> = new Map();
+
   // Registries
   private guards: Map<string | symbol, Guard<Context, Event>> = new Map();
   private reducers: Map<string | symbol, Reducer<Context, Event>> = new Map();
@@ -30,8 +36,8 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   // Node lookup by ID
   private nodesById: Map<string, StateNode> = new Map();
 
-  constructor(config: StateMachineConfig<Context, Event>) {
-    this.context = config.initialContext;
+  constructor(config: StateMachineConfig<Context, Event>, snapshot?: MachineSnapshot<Context>) {
+    this.context = snapshot?.context ?? config.initialContext;
     this.debugEnabled = config.debug ?? false;
 
     // Register guards and reducers
@@ -52,8 +58,21 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     // Second pass: resolve all target IDs now that all nodes exist
     this.resolveAllTargets();
 
-    // Initialize the machine (activate initial states)
-    this.initialize();
+    // Restore state entry counters from snapshot if provided
+    if (snapshot?.stateCounters) {
+      for (const [stateId, counter] of Object.entries(snapshot.stateCounters)) {
+        this.stateEntryCounters.set(stateId, counter);
+      }
+    }
+
+    // Initialize or restore the machine
+    if (snapshot?.configuration) {
+      // Restore configuration from snapshot
+      this.configuration = new Set(snapshot.configuration);
+    } else {
+      // Initialize the machine (activate initial states)
+      this.initialize();
+    }
   }
 
   /**
@@ -103,6 +122,93 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    */
   getConfiguration(): ReadonlySet<string> {
     return this.configuration;
+  }
+
+  /**
+   * Get state entry counters snapshot (for serialization)
+   *
+   * Note: Internally we track state entry counters, but externally in ActivityMetadata
+   * we expose this as instanceId for clarity.
+   */
+  getStateCounters(): StateCountersSnapshot {
+    const snapshot: StateCountersSnapshot = {};
+    for (const [stateId, counter] of this.stateEntryCounters.entries()) {
+      snapshot[stateId] = counter;
+    }
+    return snapshot;
+  }
+
+  /**
+   * Get machine snapshot including context, configuration, and state entry counters
+   */
+  getSnapshot(): MachineSnapshot<Context> {
+    return {
+      context: this.context,
+      configuration: Array.from(this.configuration),
+      stateCounters: this.getStateCounters(),
+    };
+  }
+
+  /**
+   * Check if an activity instance is relevant (currently active)
+   *
+   * An activity is relevant if:
+   * 1. The state where it's defined is currently active
+   * 2. The state's current entry counter matches the activity's instanceId
+   *
+   * @param metadata - Activity metadata with type, stateId, and instanceId
+   * @returns true if the activity instance is currently relevant
+   */
+  isActivityRelevant(metadata: ActivityMetadata): boolean {
+    // Check if the state is currently active
+    if (!this.configuration.has(metadata.stateId)) {
+      return false;
+    }
+
+    // Check if the entry counter matches the activity's instanceId
+    const currentCounter = this.stateEntryCounters.get(metadata.stateId) ?? 0;
+    return currentCounter === metadata.instanceId;
+  }
+
+  /**
+   * Get all currently active activities with their instance identifiers
+   *
+   * Note: Returns instanceId (external API) which corresponds to the state's entry counter
+   *
+   * @returns Array of activity metadata for all active activities
+   */
+  getActiveActivities(): ActivityMetadata[] {
+    const activities: ActivityMetadata[] = [];
+
+    // Iterate through all active states
+    for (const stateId of this.configuration) {
+      const node = this.nodesById.get(stateId);
+      if (!node) continue;
+
+      const entryCounter = this.stateEntryCounters.get(stateId) ?? 0;
+
+      // Get activities for this state
+      for (const activityType of node.activities) {
+        activities.push({
+          type: activityType,
+          stateId: stateId,
+          instanceId: entryCounter, // External API uses instanceId
+        });
+      }
+    }
+
+    return activities;
+  }
+
+  /**
+   * Get activity instance identifier
+   * Format: {stateId}_{instanceId}
+   *
+   * @param metadata - Activity metadata
+   * @returns Instance identifier string
+   */
+  getActivityInstance(metadata: ActivityMetadata): string {
+    return `${metadata.stateId}_${metadata.instanceId}`;
   }
 
   /**
@@ -217,9 +323,10 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   /**
    * Activate a state node (pure function)
    * Algorithm:
-   * 1. Execute onEntry actions
-   * 2. Activate children recursively based on node kind
-   * 3. Add node to configuration
+   * 1. Increment state entry counter
+   * 2. Execute onEntry actions
+   * 3. Activate children recursively based on node kind
+   * 4. Add node to configuration
    *
    * @param node - The state node to activate
    * @param event - The current event
@@ -235,7 +342,11 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     config: Set<string>,
     followChildren: boolean = true
   ): Context {
-    this.log(`➡️  Entering state: ${node.id}`);
+    // Increment state entry counter
+    const currentCounter = this.stateEntryCounters.get(node.id) ?? 0;
+    this.stateEntryCounters.set(node.id, currentCounter + 1);
+
+    this.log(`➡️  Entering state: ${node.id} (entry #${currentCounter + 1})`);
 
     // Step 1: Execute onEntry actions
     let newContext = this.executeReducers(node.onEntry, context, event, node.id);
@@ -499,20 +610,33 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       // Find LCA (Least Common Ancestor)
       const lca = this.findLCA(source, target);
 
+      // Special case: if target === lca, this is a transition to an ancestor
+      // We need to exit up to and including the target, then re-enter it
+      const isTransitionToAncestor = target === lca;
+
       // Compute exit set: nodes from source up to (but not including) LCA
+      // UNLESS target === lca, then include the LCA itself
       const exitSet: StateNode[] = [];
       let current: StateNode | null = source;
       while (current && current !== lca) {
         exitSet.push(current);
         current = current.parent;
       }
+      if (isTransitionToAncestor && lca !== this.root) {
+        exitSet.push(lca); // Include the target itself
+      }
 
       // Compute entry set: nodes from LCA down to target (excluding LCA)
+      // UNLESS target === lca, then include the LCA itself
       const entrySet: StateNode[] = [];
-      current = target;
-      while (current && current !== lca) {
-        entrySet.unshift(current); // Add to front for root→leaf order
-        current = current.parent;
+      if (isTransitionToAncestor && lca !== this.root) {
+        entrySet.push(lca); // Include the target itself
+      } else {
+        current = target;
+        while (current && current !== lca) {
+          entrySet.unshift(current); // Add to front for root→leaf order
+          current = current.parent;
+        }
       }
 
       this.log(`\n🔀 Transition: ${source.id} → ${target.id}`);

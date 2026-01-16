@@ -151,6 +151,43 @@ export interface StateMachineConfig<Context extends StateContext, Event extends 
 export type StateValue = string | { [key: string]: StateValue };
 
 /**
+ * Activity instance identifier - combines state ID and instance ID
+ * Format: {stateId}_{instanceId}
+ * Example: "submitting.validating_3" means the 3rd instance of the validating state
+ */
+export type ActivityInstance = string;
+
+/**
+ * Activity metadata for relevance checking
+ *
+ * The instanceId corresponds to the state's entry counter at the time the activity was created.
+ * This allows external systems to track which specific instance of a state's activities are relevant.
+ */
+export interface ActivityMetadata {
+  type: string | symbol; // Activity type identifier
+  stateId: string; // State node ID where activity is defined
+  instanceId: number; // Activity instance ID (corresponds to state entry counter)
+}
+
+/**
+ * Snapshot of state entry counters for serialization
+ *
+ * Maps state IDs to their entry counters (how many times each state has been entered).
+ */
+export interface StateCountersSnapshot {
+  [stateId: string]: number;
+}
+
+/**
+ * Machine snapshot including context, configuration, and state entry counters
+ */
+export interface MachineSnapshot<Context extends StateContext> {
+  context: Context;
+  configuration: string[];
+  stateCounters: StateCountersSnapshot;
+}
+
+/**
  * State machine instance
  */
 export interface StateMachine<Context extends StateContext, Event extends BaseEvent> {

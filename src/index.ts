@@ -16,10 +16,16 @@ export type {
   AlwaysTransition,
   StateConfig,
   StateMap,
-  StateMachine,
   StateMachineConfig,
   StateValue,
+  ActivityInstance,
+  ActivityMetadata,
+  StateCountersSnapshot,
+  MachineSnapshot,
 } from './types';
 
 // Export guard combination helpers
 export { and, or, not } from './types';
+
+// Export StateMachine class
+export { StateMachine } from './state-machine';
