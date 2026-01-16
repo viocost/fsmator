@@ -103,7 +103,7 @@ describe('Context Changes Integration (Shopping Cart)', () => {
       },
     };
 
-    return new StateMachine(config);
+    return new StateMachine(config).start();
   }
 
   it('should initialize with empty cart', () => {

@@ -90,7 +90,7 @@ describe('Nested Machine Integration (Form Validation)', () => {
       },
     };
 
-    return new StateMachine(config);
+    return new StateMachine(config).start();
   }
 
   it('should initialize to idle state', () => {

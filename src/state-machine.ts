@@ -25,6 +25,9 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   private context: Context;
   private configuration: Set<string> = new Set();
   private debugEnabled: boolean = false;
+  private started: boolean = false;
+  private loaded: boolean = false;
+  private halted: boolean = false;
 
   // State entry counters for activity tracking
   private stateEntryCounters: Map<string, number> = new Map();
@@ -36,8 +39,8 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   // Node lookup by ID
   private nodesById: Map<string, StateNode> = new Map();
 
-  constructor(config: StateMachineConfig<Context, Event>, snapshot?: MachineSnapshot<Context>) {
-    this.context = snapshot?.context ?? config.initialContext;
+  constructor(config: StateMachineConfig<Context, Event>) {
+    this.context = config.initialContext;
     this.debugEnabled = config.debug ?? false;
 
     // Register guards and reducers
@@ -57,22 +60,109 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
 
     // Second pass: resolve all target IDs now that all nodes exist
     this.resolveAllTargets();
+  }
 
-    // Restore state entry counters from snapshot if provided
-    if (snapshot?.stateCounters) {
+  /**
+   * Start the state machine by activating initial states or evaluating always transitions after load
+   * Must be called before sending events
+   * @returns this for chaining
+   */
+  start(): this {
+    if (this.started) {
+      throw new Error('State machine already started');
+    }
+
+    this.log('🚀 Starting state machine');
+
+    if (this.loaded) {
+      // If loaded from snapshot, just evaluate always transitions and mark as started
+      const loadEvent = { type: '__load__' } as Event;
+      this.evaluateAlwaysTransitions(loadEvent);
+      this.checkFinalStates();
+    } else {
+      // Fresh start - initialize from initial state
+      this.initialize();
+    }
+
+    this.started = true;
+    return this;
+  }
+
+  /**
+   * Load a snapshot and restore machine state
+   * Performs sanity checks to ensure snapshot is valid for current schema
+   * Must call start() after load() to begin processing events
+   * @param snapshot - The snapshot to load
+   * @returns this for chaining
+   */
+  load(snapshot: MachineSnapshot<Context>): this {
+    if (this.started) {
+      throw new Error('Cannot load snapshot on already started machine');
+    }
+
+    this.log('📥 Loading snapshot');
+
+    // Validate that all states in configuration exist in schema
+    for (const stateId of snapshot.configuration) {
+      const node = this.nodesById.get(stateId);
+      if (!node) {
+        throw new Error(`Invalid snapshot: state "${stateId}" not found in schema`);
+      }
+    }
+
+    // Validate that configuration is valid (all atomic states are active)
+    const configSet = new Set(snapshot.configuration);
+
+    // Check that we have at least one state
+    if (configSet.size === 0) {
+      throw new Error('Invalid snapshot: configuration is empty');
+    }
+
+    // Restore context
+    this.context = snapshot.context;
+
+    // Restore state entry counters
+    if (snapshot.stateCounters) {
       for (const [stateId, counter] of Object.entries(snapshot.stateCounters)) {
+        // Validate state exists
+        if (!this.nodesById.has(stateId)) {
+          throw new Error(
+            `Invalid snapshot: state "${stateId}" in stateCounters not found in schema`
+          );
+        }
         this.stateEntryCounters.set(stateId, counter);
       }
     }
 
-    // Initialize or restore the machine
-    if (snapshot?.configuration) {
-      // Restore configuration from snapshot
-      this.configuration = new Set(snapshot.configuration);
-    } else {
-      // Initialize the machine (activate initial states)
-      this.initialize();
+    // Restore configuration (but don't mark as started yet)
+    this.configuration = configSet;
+    this.loaded = true;
+
+    this.log('✅ Snapshot loaded:', {
+      configuration: Array.from(this.configuration),
+      context: this.context,
+    });
+
+    return this;
+  }
+
+  /**
+   * Dump current machine state as a serialized JSON snapshot
+   * Can be used to persist and restore machine state
+   * @returns JSON string containing the snapshot
+   */
+  dump(): string {
+    if (this.configuration.size === 0) {
+      throw new Error('Cannot dump: machine not started');
     }
+
+    const snapshot: MachineSnapshot<Context> = {
+      context: this.context,
+      configuration: Array.from(this.configuration),
+      stateCounters: this.getStateCounters(),
+    };
+
+    return JSON.stringify(snapshot);
   }
 
   /**
@@ -122,6 +212,29 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    */
   getConfiguration(): ReadonlySet<string> {
     return this.configuration;
+  }
+
+  /**
+   * Check if the machine is in a final state (halted)
+   */
+  isHalted(): boolean {
+    return this.halted;
+  }
+
+  /**
+   * Check if any active atomic state is a final state
+   * If so, mark the machine as halted
+   */
+  private checkFinalStates(): void {
+    // Check all active atomic states
+    for (const stateId of this.configuration) {
+      const node = this.nodesById.get(stateId);
+      if (node && node.kind === 'atomic' && node.final) {
+        this.halted = true;
+        this.log(`⏹️  Machine halted: reached final state "${stateId}"`);
+        return;
+      }
+    }
   }
 
   /**
@@ -285,6 +398,9 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
 
     // Evaluate always transitions after initialization
     this.evaluateAlwaysTransitions(initEvent);
+
+    // Check if we've reached a final state
+    this.checkFinalStates();
   }
 
   /**
@@ -727,6 +843,17 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    * 7. Evaluate always transitions until none are enabled (microsteps)
    */
   send(event: Event): void {
+    // Check if machine is started
+    if (!this.started) {
+      throw new Error('Cannot send events: machine not started. Call start() first.');
+    }
+
+    // If machine is halted, return immediately without processing
+    if (this.halted) {
+      this.log(`⏹️  Machine halted, ignoring event: ${event.type}`);
+      return;
+    }
+
     this.log(`\n📨 Event received: ${event.type}`);
     this.log(`   Current configuration:`, Array.from(this.configuration));
 
@@ -756,6 +883,9 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
 
     // Evaluate always transitions (may cause additional transitions)
     this.evaluateAlwaysTransitions(event);
+
+    // Check if we've reached a final state
+    this.checkFinalStates();
   }
 
   /**
@@ -844,14 +974,22 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   private compileNode(key: string, stateConfig: StateConfig<Event>, parent: StateNode): StateNode {
     const nodeId = parent.id === '__root__' ? key : `${parent.id}.${key}`;
 
+    // Check if this is a final state
+    const isFinal = stateConfig.type === 'final';
+
     // Determine node kind
     let kind: NodeKind = 'atomic';
     if (stateConfig.states) {
-      kind = stateConfig.initial ? 'compound' : 'parallel';
+      // Explicit type override from config, or infer from initial
+      if (stateConfig.type === 'parallel') {
+        kind = 'parallel';
+      } else {
+        kind = stateConfig.initial ? 'compound' : 'parallel';
+      }
     }
 
     // Create the node
-    const node = new StateNode(nodeId, key, kind, parent);
+    const node = new StateNode(nodeId, key, kind, parent, isFinal);
     this.nodesById.set(nodeId, node);
 
     // Compile children if any

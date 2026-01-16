@@ -33,7 +33,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     machine.send({ type: 'INC' });
 
     expect(consoleLogSpy).not.toHaveBeenCalled();
@@ -54,7 +54,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     machine.send({ type: 'INC' });
 
     expect(consoleLogSpy).not.toHaveBeenCalled();
@@ -70,7 +70,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    new StateMachine(config);
+    new StateMachine(config).start();
 
     // Check for initialization logs
     expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Initializing'));
@@ -92,7 +92,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear(); // Clear initialization logs
 
     machine.send({ type: 'INC' });
@@ -128,7 +128,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
     machine.send({ type: 'INC' });
@@ -159,7 +159,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
     machine.send({ type: 'INC' });
@@ -191,7 +191,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
     machine.send({ type: 'INC' });
@@ -223,7 +223,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
     machine.send({ type: 'INC' });
@@ -260,7 +260,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
     machine.send({ type: 'GO' });
@@ -285,7 +285,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
     machine.send({ type: 'REFRESH' });
@@ -314,7 +314,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
     machine.send({ type: 'INC' });
@@ -349,7 +349,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
     machine.send({ type: 'GO' });
@@ -375,7 +375,7 @@ describe('Debug Logging', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
     machine.send({ type: 'INC' });

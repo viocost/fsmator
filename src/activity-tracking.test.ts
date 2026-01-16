@@ -19,7 +19,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const counters = machine.getStateCounters();
 
       expect(counters['idle']).toBe(1);
@@ -40,7 +40,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       expect(machine.getStateCounters()['a']).toBe(1);
 
@@ -80,7 +80,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // Initial state
       expect(machine.getStateCounters()['parent']).toBe(1);
@@ -145,7 +145,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // Initial counters
       expect(machine.getStateCounters()['parallel.regionA.a1']).toBe(1);
@@ -179,7 +179,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const activities = machine.getActiveActivities();
 
       expect(activities).toEqual([]);
@@ -196,7 +196,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const activities = machine.getActiveActivities();
 
       expect(activities).toHaveLength(2);
@@ -228,7 +228,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // Initial state A (instanceId = 1)
       let activities = machine.getActiveActivities();
@@ -280,7 +280,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const activities = machine.getActiveActivities();
 
       expect(activities).toHaveLength(2);
@@ -324,7 +324,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const activities = machine.getActiveActivities();
 
       expect(activities).toHaveLength(2);
@@ -353,7 +353,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       const metadata: ActivityMetadata = {
         type: 'fetchData',
@@ -379,7 +379,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // Save activity from first entry
       const oldActivity: ActivityMetadata = {
@@ -419,7 +419,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       const activityA: ActivityMetadata = {
         type: 'activityA',
@@ -447,7 +447,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       const metadata: ActivityMetadata = {
         type: 'fetchData',
@@ -473,7 +473,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       const instance1 = machine.getActivityInstance({
         type: 'activityA',
@@ -511,7 +511,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       const metadata: ActivityMetadata = {
         type: 'childActivity',
@@ -538,7 +538,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       machine.send({ type: 'TOGGLE' }); // a → b
       machine.send({ type: 'TOGGLE' }); // b → a
@@ -567,7 +567,7 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine1 = new StateMachine(config);
+      const machine1 = new StateMachine(config).start();
       machine1.send({ type: 'TOGGLE' }); // a → b
       machine1.send({ type: 'TOGGLE' }); // b → a
       machine1.send({ type: 'TOGGLE' }); // a → b
@@ -575,7 +575,7 @@ describe('Activity Tracking', () => {
       const snapshot = machine1.getSnapshot();
 
       // Create new machine from snapshot
-      const machine2 = new StateMachine(config, snapshot);
+      const machine2 = new StateMachine(config).load(snapshot);
 
       expect(machine2.getStateCounters()).toEqual(snapshot.stateCounters);
       expect(machine2.getContext()).toEqual(snapshot.context);
@@ -598,14 +598,14 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine1 = new StateMachine(config);
+      const machine1 = new StateMachine(config).start();
       machine1.send({ type: 'TOGGLE' }); // a → b
 
       const snapshot = machine1.getSnapshot();
       const activities1 = machine1.getActiveActivities();
 
       // Restore to new machine
-      const machine2 = new StateMachine(config, snapshot);
+      const machine2 = new StateMachine(config).load(snapshot);
       const activities2 = machine2.getActiveActivities();
 
       expect(activities2).toEqual(activities1);
@@ -632,14 +632,14 @@ describe('Activity Tracking', () => {
         },
       };
 
-      const machine1 = new StateMachine(config);
+      const machine1 = new StateMachine(config).start();
       machine1.send({ type: 'TOGGLE' }); // a → b
       machine1.send({ type: 'TOGGLE' }); // b → a (a counter = 2)
 
       const snapshot = machine1.getSnapshot();
 
       // Restore and continue
-      const machine2 = new StateMachine(config, snapshot);
+      const machine2 = new StateMachine(config).load(snapshot).start();
       machine2.send({ type: 'TOGGLE' }); // a → b (b counter = 2)
       machine2.send({ type: 'TOGGLE' }); // b → a (a counter = 3)
 

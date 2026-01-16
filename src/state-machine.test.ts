@@ -20,7 +20,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const root = machine.getRoot();
 
       expect(root).toBeDefined();
@@ -44,7 +44,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       expect(machine.getGuard('isPositive')).toBeDefined();
       expect(machine.getReducer('increment')).toBeDefined();
@@ -60,7 +60,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       expect(machine.getNode('idle')).toBeDefined();
       expect(machine.getNode('active')).toBeDefined();
@@ -84,7 +84,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const parent = machine.getNode('parent');
       const child1 = machine.getNode('parent.child1');
 
@@ -114,7 +114,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const l3 = machine.getNode('l1.l2.l3');
 
       expect(l3).toBeDefined();
@@ -149,7 +149,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const parallel = machine.getNode('parallel');
 
       expect(parallel).toBeDefined();
@@ -175,7 +175,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const idle = machine.getNode('idle');
       const transitions = idle?.getTransitions('NEXT');
 
@@ -201,7 +201,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const idle = machine.getNode('idle');
       const transitions = idle?.getTransitions('NEXT');
 
@@ -230,7 +230,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const idle = machine.getNode('idle');
       const transitions = idle?.getTransitions('NEXT');
 
@@ -255,7 +255,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const idle = machine.getNode('idle');
 
       expect(idle?.alwaysTransitions).toHaveLength(1);
@@ -283,7 +283,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const child1 = machine.getNode('parent.child1');
       const child2 = machine.getNode('parent.child2');
       const transitions = child1?.getTransitions('NEXT');
@@ -314,7 +314,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const child = machine.getNode('parent.child');
       const transitions = child?.getTransitions('NEXT');
 
@@ -334,7 +334,7 @@ describe('StateMachine', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
       const active = machine.getNode('active');
 
       expect(active?.activities).toEqual(['ACTIVITY_ONE', 'ACTIVITY_TWO']);

@@ -25,7 +25,7 @@ describe('StateMachine Initialization', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     const configuration = machine.getConfiguration();
 
     expect(configuration.has('idle')).toBe(true);
@@ -47,7 +47,7 @@ describe('StateMachine Initialization', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     const context = machine.getContext();
 
     expect(context.log).toEqual(['entered-idle']);
@@ -75,7 +75,7 @@ describe('StateMachine Initialization', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     const configuration = machine.getConfiguration();
     const context = machine.getContext();
 
@@ -112,7 +112,7 @@ describe('StateMachine Initialization', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     const configuration = machine.getConfiguration();
     const context = machine.getContext();
 
@@ -142,7 +142,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     expect(machine.getConfiguration().has('idle')).toBe(true);
 
     machine.send({ type: 'NEXT' });
@@ -173,7 +173,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     machine.send({ type: 'NEXT' });
 
     const context = machine.getContext();
@@ -197,7 +197,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     machine.send({ type: 'NEXT' });
 
     const context = machine.getContext();
@@ -221,7 +221,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     machine.send({ type: 'NEXT' });
 
     expect(machine.getConfiguration().has('active')).toBe(true);
@@ -244,7 +244,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     machine.send({ type: 'NEXT' });
 
     // Should remain in idle because guard failed
@@ -268,7 +268,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     machine.send({ type: 'INCREMENT' });
 
     // Should remain in idle
@@ -296,7 +296,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     const initialLog = machine.getContext().log;
     expect(initialLog).toEqual(['entry']);
 
@@ -315,7 +315,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     const configBefore = new Set(machine.getConfiguration());
     const contextBefore = machine.getContext();
 
@@ -353,7 +353,7 @@ describe('LCA-based Transitions', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     expect(machine.getConfiguration().has('a.b')).toBe(true);
 
     machine.send({ type: 'NEXT' });
@@ -407,7 +407,7 @@ describe('LCA-based Transitions', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     expect(machine.getConfiguration().has('a.b.c')).toBe(true);
 
     machine.send({ type: 'GO_TO_C' });
@@ -452,7 +452,7 @@ describe('LCA-based Transitions', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     machine.send({ type: 'NEXT' });
 
     const configuration = machine.getConfiguration();
@@ -490,7 +490,7 @@ describe('LCA-based Transitions', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     machine.send({ type: 'NEXT' });
 
     const configuration = machine.getConfiguration();
@@ -520,7 +520,7 @@ describe('Context Immutability', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     const contextBefore = machine.getContext();
     const countBefore = contextBefore.count;
 
@@ -554,7 +554,7 @@ describe('Context Immutability', () => {
       },
     };
 
-    const machine = new StateMachine(config);
+    const machine = new StateMachine(config).start();
     machine.send({ type: 'NEXT' });
 
     const context = machine.getContext();

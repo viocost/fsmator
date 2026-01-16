@@ -136,7 +136,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
       },
     };
 
-    return new StateMachine(config);
+    return new StateMachine(config).start();
   }
 
   it('should initialize to loggedOut state', () => {

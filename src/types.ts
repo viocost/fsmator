@@ -112,6 +112,7 @@ export interface AlwaysTransition {
  * State configuration - can include nested states
  */
 export interface StateConfig<Event extends BaseEvent> {
+  type?: 'final' | 'parallel';
   on?: OnTransitions<Event>;
   always?: AlwaysTransition[];
   activities?: Array<string | symbol>;

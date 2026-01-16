@@ -91,7 +91,7 @@ describe('Parallel Machine Integration (Media Player)', () => {
       },
     };
 
-    return new StateMachine(config);
+    return new StateMachine(config).start();
   }
 
   it('should initialize with both parallel regions active', () => {

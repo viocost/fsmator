@@ -44,7 +44,7 @@ describe('Flat Machine Integration (Traffic Light)', () => {
       },
     };
 
-    return new StateMachine(config);
+    return new StateMachine(config).start();
   }
 
   it('should initialize to red state', () => {

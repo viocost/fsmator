@@ -70,7 +70,7 @@ describe('Always Transitions - Integration', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // Try to submit without filling form
       machine.send({ type: 'SUBMIT' });
@@ -128,7 +128,7 @@ describe('Always Transitions - Integration', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       machine.send({ type: 'START' });
 
@@ -202,7 +202,7 @@ describe('Always Transitions - Integration', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // Try to access admin without auth - should redirect to login
       machine.send({ type: 'GO_ADMIN' });
@@ -287,7 +287,7 @@ describe('Always Transitions - Integration', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // With both options disabled, should skip directly to payment
       machine.send({ type: 'NEXT' });
@@ -327,7 +327,7 @@ describe('Always Transitions - Integration', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       expect(machine.getConfiguration().has('green')).toBe(true);
 
@@ -376,7 +376,7 @@ describe('Always Transitions - Integration', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       machine.send({ type: 'START' });
 

@@ -20,7 +20,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // Should immediately transition to ready due to always transition
       expect(machine.getConfiguration().has('ready')).toBe(true);
@@ -42,7 +42,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       expect(machine.getConfiguration().has('idle')).toBe(true);
 
@@ -80,7 +80,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       machine.send({ type: 'START' });
 
@@ -110,7 +110,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       machine.send({ type: 'START' });
 
@@ -149,7 +149,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       machine.send({ type: 'START' });
 
@@ -182,7 +182,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       machine.send({ type: 'START' });
 
@@ -210,7 +210,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       expect(machine.getContext().count).toBe(0);
 
@@ -244,7 +244,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       machine.send({ type: 'START' });
 
@@ -284,7 +284,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       machine.send({ type: 'START' });
 
@@ -321,7 +321,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // Should immediately transition to parent.ready
       expect(machine.getConfiguration().has('parent.ready')).toBe(true);
@@ -351,7 +351,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // Should transition from parent.child to sibling
       expect(machine.getConfiguration().has('sibling')).toBe(true);
@@ -379,7 +379,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // Parent's always transition should fire, exiting to done
       expect(machine.getConfiguration().has('done')).toBe(true);
@@ -408,7 +408,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       machine.send({ type: 'START' });
 
@@ -440,7 +440,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // Should chain through all steps to final
       expect(machine.getConfiguration().has('final')).toBe(true);
@@ -463,7 +463,7 @@ describe('Always Transitions', () => {
       };
 
       expect(() => {
-        new StateMachine(config);
+        new StateMachine(config).start();
       }).toThrow('Maximum always transition iterations reached');
     });
 
@@ -480,7 +480,7 @@ describe('Always Transitions', () => {
         },
       };
 
-      const machine = new StateMachine(config);
+      const machine = new StateMachine(config).start();
 
       // Sending NEXT should not trigger any transition
       machine.send({ type: 'NEXT' });
