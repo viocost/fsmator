@@ -7,9 +7,9 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     }
   },
   "files": [
@@ -37,7 +37,15 @@
     "fsm",
     "finite-state-machine"
   ],
-  "author": "",
+  "author": "Konstantin Y. Rybakov",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viocost/fsmator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/viocost/fsmator/issues"
+  },
+  "homepage": "https://github.com/viocost/fsmator#readme",
   "license": "MIT",
   "packageManager": "pnpm@10.11.0",
   "devDependencies": {
