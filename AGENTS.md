@@ -1,6 +1,6 @@
 # Agent Development Guide
 
-This document provides coding guidelines for AI agents working on the state-reducer codebase.
+This document provides coding guidelines for AI agents working on the fsmator codebase.
 
 ## Quick Reference
 

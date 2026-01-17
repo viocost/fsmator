@@ -1,6 +1,6 @@
 # State Reducer Examples
 
-This folder contains comprehensive examples demonstrating various features of the state-reducer library.
+This folder contains comprehensive examples demonstrating various features of the fsmator library.
 
 ## Running Examples
 

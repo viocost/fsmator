@@ -1,4 +1,4 @@
-import { StateMap, ReducerArgs, and, or, not, createMachine } from "state-reducer";
+import { StateMap, ReducerArgs, and, or, not, createMachine } from "fsmator";
 
 interface StateContext {
   someProperty: string;

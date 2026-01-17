@@ -77,11 +77,11 @@ Enter: d → e
 ## Installation
 
 ```bash
-npm install state-reducer
+npm install fsmator
 # or
-pnpm install state-reducer
+pnpm install fsmator
 # or
-yarn add state-reducer
+yarn add fsmator
 ```
 
 ## Examples
@@ -107,8 +107,8 @@ All examples run with `debug: true` to show detailed state machine operation log
 ### Basic Example
 
 ```typescript
-import { StateMachine } from 'state-reducer';
-import type { StateMachineConfig, StateContext, BaseEvent } from 'state-reducer';
+import { StateMachine } from 'fsmator';
+import type { StateMachineConfig, StateContext, BaseEvent } from 'fsmator';
 
 // Define your context
 interface CounterContext extends StateContext {
@@ -745,7 +745,7 @@ type Reducer<Context, Event> = (args: {
 ### Guard Combinators
 
 ```typescript
-import { and, or, not } from 'state-reducer';
+import { and, or, not } from 'fsmator';
 
 const config = {
   guards: {

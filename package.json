@@ -1,5 +1,5 @@
 {
-  "name": "state-reducer",
+  "name": "fsmator",
   "version": "0.1.0",
   "description": "A lightweight and type-safe state machine library",
   "main": "./dist/index.js",

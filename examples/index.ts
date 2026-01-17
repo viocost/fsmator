@@ -1,6 +1,6 @@
 /**
  * Examples Index
- * Run all examples demonstrating state-reducer features
+ * Run all examples demonstrating fsmator features
  *
  * Usage: npx tsx examples/index.ts
  */
