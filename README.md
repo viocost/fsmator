@@ -1,10 +1,10 @@
-# State Reducer
+# Fsmator
 
 A synchronous state machine reducer engine for TypeScript with XState-compatible semantics.
 
-## What is State Reducer?
+## What is Fsmator?
 
-State Reducer is a pure, synchronous state machine library that treats state machines as **reducers** - pure functions that take the current state and an event, and return the new state. Unlike XState which focuses on side effects and async operations, State Reducer is designed for:
+Fsmator is a pure, synchronous state machine library that treats state machines as **reducers** - pure functions that take the current state and an event, and return the new state. Unlike XState which focuses on side effects and async operations, Fsmator is designed for:
 
 - **Pure state management**: No side effects, no async, no runtime invocations
 - **Synchronous execution**: Each event completes in a single "macro step"
@@ -538,7 +538,7 @@ Time travel features:
 
 ## Debugging
 
-State Reducer includes comprehensive debug logging to help you understand exactly what's happening during state machine operations. Enable it by setting `debug: true` in your configuration:
+Fsmator includes comprehensive debug logging to help you understand exactly what's happening during state machine operations. Enable it by setting `debug: true` in your configuration:
 
 ```typescript
 const config: StateMachineConfig<Context, Event> = {
@@ -799,7 +799,7 @@ pnpm run dev
 
 ## Key Differences from XState
 
-| Feature                  | State Reducer                  | XState                             |
+| Feature                  | Fsmator                  | XState                             |
 | ------------------------ | ------------------------------ | ---------------------------------- |
 | **Execution Model**      | Synchronous, single macro step | Async with actors and side effects |
 | **Side Effects**         | None (pure reducers only)      | Full support (invoke, spawn, etc.) |
