@@ -28,6 +28,7 @@ export class StateNode {
   readonly kind: NodeKind;
   readonly parent: StateNode | null;
   readonly final: boolean;
+  readonly history: boolean; // Shallow history enabled for this compound state
 
   private _children: StateNode[] = [];
   private _initial: StateNode | null = null;
@@ -44,12 +45,20 @@ export class StateNode {
   private _onEntry: Array<string | symbol> = [];
   private _onExit: Array<string | symbol> = [];
 
-  constructor(id: string, key: string, kind: NodeKind, parent: StateNode | null, final = false) {
+  constructor(
+    id: string,
+    key: string,
+    kind: NodeKind,
+    parent: StateNode | null,
+    final = false,
+    history = false
+  ) {
     this.id = id;
     this.key = key;
     this.kind = kind;
     this.parent = parent;
     this.final = final;
+    this.history = history;
   }
 
   /**

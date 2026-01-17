@@ -14,6 +14,7 @@ import type {
   GuardRef,
   ActivityMetadata,
   StateCountersSnapshot,
+  StateHistorySnapshot,
   MachineSnapshot,
   StateValue,
 } from './types';
@@ -32,6 +33,9 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
 
   // State entry counters for activity tracking
   private stateEntryCounters: Map<string, number> = new Map();
+
+  // Shallow state history: maps compound state ID to last active child state ID
+  private stateHistory: Map<string, string> = new Map();
 
   // Time travel history
   private timeTravelEnabled: boolean = false;
@@ -145,6 +149,24 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       }
     }
 
+    // Restore shallow history
+    if (snapshot.stateHistory) {
+      for (const [compoundStateId, childStateId] of Object.entries(snapshot.stateHistory)) {
+        // Validate both states exist
+        if (!this.nodesById.has(compoundStateId)) {
+          throw new Error(
+            `Invalid snapshot: state "${compoundStateId}" in stateHistory not found in schema`
+          );
+        }
+        if (!this.nodesById.has(childStateId)) {
+          throw new Error(
+            `Invalid snapshot: state "${childStateId}" in stateHistory not found in schema`
+          );
+        }
+        this.stateHistory.set(compoundStateId, childStateId);
+      }
+    }
+
     // Restore configuration (but don't mark as started yet)
     this.configuration = configSet;
     this.loaded = true;
@@ -167,13 +189,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       throw new Error('Cannot dump: machine not started');
     }
 
-    const snapshot: MachineSnapshot<Context> = {
-      context: this.context,
-      configuration: Array.from(this.configuration),
-      stateCounters: this.getStateCounters(),
-    };
-
-    return JSON.stringify(snapshot);
+    return JSON.stringify(this.getSnapshot());
   }
 
   /**
@@ -360,6 +376,14 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       this.stateEntryCounters.set(stateId, counter);
     }
 
+    // Restore shallow history
+    this.stateHistory.clear();
+    if (snapshot.stateHistory) {
+      for (const [compoundStateId, childStateId] of Object.entries(snapshot.stateHistory)) {
+        this.stateHistory.set(compoundStateId, childStateId);
+      }
+    }
+
     // Check if we're in a final state
     this.halted = false; // Reset first
     this.checkFinalStates();
@@ -485,7 +509,19 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       context: this.context,
       configuration: Array.from(this.configuration),
       stateCounters: this.getStateCounters(),
+      stateHistory: this.getStateHistory(),
     };
+  }
+
+  /**
+   * Get shallow history snapshot (for serialization)
+   */
+  private getStateHistory(): StateHistorySnapshot {
+    const snapshot: StateHistorySnapshot = {};
+    for (const [compoundStateId, childStateId] of this.stateHistory.entries()) {
+      snapshot[compoundStateId] = childStateId;
+    }
+    return snapshot;
   }
 
   /**
@@ -701,10 +737,23 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       if (node.isAtomic()) {
         // Atomic nodes have no children to activate
       } else if (node.isCompound()) {
-        // Compound nodes: activate the initial child
-        const initial = node.initial;
-        if (initial) {
-          newContext = this.activateState(initial, event, newContext, config, true);
+        // Compound nodes: activate child based on history or initial
+        let childToActivate = node.initial;
+
+        // If history is enabled and we have a recorded history state, use it
+        if (node.history) {
+          const historyStateId = this.stateHistory.get(node.id);
+          if (historyStateId) {
+            const historyState = this.nodesById.get(historyStateId);
+            if (historyState && node.children.includes(historyState)) {
+              childToActivate = historyState;
+              this.log(`   📖 Using history for ${node.id}: ${historyState.id}`);
+            }
+          }
+        }
+
+        if (childToActivate) {
+          newContext = this.activateState(childToActivate, event, newContext, config, true);
         }
       } else if (node.isParallel()) {
         // Parallel nodes: activate all region children
@@ -731,6 +780,16 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    */
   private deactivateState(node: StateNode, event: Event, context: Context): Context {
     this.log(`⬅️  Exiting state: ${node.id}`);
+
+    // Record history if this is a compound state with history enabled
+    if (node.isCompound() && node.history && node.initial) {
+      // Find the currently active child in the configuration
+      const activeChild = node.children.find((child) => this.configuration.has(child.id));
+      if (activeChild) {
+        this.stateHistory.set(node.id, activeChild.id);
+        this.log(`   📝 Recording history for ${node.id}: ${activeChild.id}`);
+      }
+    }
 
     // Execute onExit actions
     return this.executeReducers(node.onExit, context, event, node.id);
@@ -1079,9 +1138,18 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
 
         // Also remove all descendants of this node from configuration
         // (Important for parallel states where children remain active)
+        // AND record history for any compound descendants with history enabled
         for (const stateId of Array.from(config)) {
           const stateNode = this.nodesById.get(stateId);
           if (stateNode && stateNode.isDescendantOf(node)) {
+            // Record history for compound descendants before removing them
+            if (stateNode.isCompound() && stateNode.history && stateNode.initial) {
+              const activeChild = stateNode.children.find((child) => config.has(child.id));
+              if (activeChild) {
+                this.stateHistory.set(stateNode.id, activeChild.id);
+                this.log(`   📝 Recording history for ${stateNode.id}: ${activeChild.id}`);
+              }
+            }
             config.delete(stateId);
           }
         }
@@ -1275,6 +1343,9 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     // Check if this is a final state
     const isFinal = stateConfig.type === 'final';
 
+    // Check if shallow history is enabled
+    const hasHistory = stateConfig.history ?? false;
+
     // Determine node kind
     let kind: NodeKind = 'atomic';
     if (stateConfig.states) {
@@ -1287,7 +1358,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     }
 
     // Create the node
-    const node = new StateNode(nodeId, key, kind, parent, isFinal);
+    const node = new StateNode(nodeId, key, kind, parent, isFinal, hasHistory);
     this.nodesById.set(nodeId, node);
 
     // Compile children if any

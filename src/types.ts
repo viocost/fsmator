@@ -120,6 +120,7 @@ export interface StateConfig<Event extends BaseEvent> {
   onExit?: Array<string | symbol>;
   initial?: string;
   states?: Record<string, StateConfig<Event>>;
+  history?: boolean; // Enable shallow history for this compound state
 }
 
 /**
@@ -181,12 +182,22 @@ export interface StateCountersSnapshot {
 }
 
 /**
+ * Snapshot of shallow history states
+ *
+ * Maps compound state IDs to their last active child state ID
+ */
+export interface StateHistorySnapshot {
+  [compoundStateId: string]: string;
+}
+
+/**
  * Machine snapshot including context, configuration, and state entry counters
  */
 export interface MachineSnapshot<Context extends StateContext> {
   context: Context;
   configuration: string[];
   stateCounters: StateCountersSnapshot;
+  stateHistory?: StateHistorySnapshot; // Shallow history tracking
 }
 
 /**
