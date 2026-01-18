@@ -8,6 +8,12 @@
 
 Build, debug, and explore state machine behavior in real-time with the visual editor.
 
+
+
+https://github.com/user-attachments/assets/992ce2da-1fd7-47a4-97d3-bd710e8e0f43
+
+
+
 ---
 
 Fsmator is a **logic engine**, not a runtime. It treats state machines strictly as **reducers**: pure functions that take the current state and an event, and return a new state.
