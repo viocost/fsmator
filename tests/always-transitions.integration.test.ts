@@ -32,7 +32,7 @@ describe('Always Transitions - Integration', () => {
         guards: {
           isFormValid: ({ context }) => context.name.length > 0 && context.email.includes('@'),
         },
-        reducers: {
+        assigns: {
           setName: ({ context, event }) => ({
             name: (event as { type: 'SET_NAME'; value: string }).value,
           }),
@@ -73,15 +73,15 @@ describe('Always Transitions - Integration', () => {
       const machine = new StateMachine(config).start();
 
       // Try to submit without filling form
-      machine.send({ type: 'SUBMIT' });
+      machine.handle({ type: 'SUBMIT' });
       expect(machine.getActiveStateNodes().has('invalid')).toBe(true);
 
       // Fill form
-      machine.send({ type: 'SET_NAME', value: 'John' });
-      machine.send({ type: 'SET_EMAIL', value: 'john@example.com' });
+      machine.handle({ type: 'SET_NAME', value: 'John' });
+      machine.handle({ type: 'SET_EMAIL', value: 'john@example.com' });
 
       // Submit valid form
-      machine.send({ type: 'SUBMIT' });
+      machine.handle({ type: 'SUBMIT' });
 
       // Should auto-validate and auto-submit
       expect(machine.getActiveStateNodes().has('success')).toBe(true);
@@ -105,7 +105,7 @@ describe('Always Transitions - Integration', () => {
           hasMoreSteps: ({ context }) => context.loadingSteps < context.maxSteps,
           isComplete: ({ context }) => context.loadingSteps >= context.maxSteps,
         },
-        reducers: {
+        assigns: {
           incrementStep: ({ context }) => ({
             loadingSteps: context.loadingSteps + 1,
           }),
@@ -130,7 +130,7 @@ describe('Always Transitions - Integration', () => {
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       // Should auto-increment and reach complete
       expect(machine.getActiveStateNodes().has('complete')).toBe(true);
@@ -164,7 +164,7 @@ describe('Always Transitions - Integration', () => {
           isAdmin: ({ context }) => context.isAuthenticated && context.isAdmin,
           isNotAdmin: ({ context }) => context.isAuthenticated && !context.isAdmin,
         },
-        reducers: {
+        assigns: {
           login: ({ context, event }) => ({
             isAuthenticated: true,
             isAdmin: (event as { type: 'LOGIN'; isAdmin: boolean }).isAdmin,
@@ -205,24 +205,24 @@ describe('Always Transitions - Integration', () => {
       const machine = new StateMachine(config).start();
 
       // Try to access admin without auth - should redirect to login
-      machine.send({ type: 'GO_ADMIN' });
+      machine.handle({ type: 'GO_ADMIN' });
       expect(machine.getActiveStateNodes().has('login')).toBe(true);
 
       // Login as regular user
-      machine.send({ type: 'LOGIN', isAdmin: false });
+      machine.handle({ type: 'LOGIN', isAdmin: false });
       // Should auto-redirect to home after login
       expect(machine.getActiveStateNodes().has('home')).toBe(true);
 
       // Try to access admin as regular user - should redirect to home
-      machine.send({ type: 'GO_ADMIN' });
+      machine.handle({ type: 'GO_ADMIN' });
       expect(machine.getActiveStateNodes().has('home')).toBe(true);
 
       // Logout, then login as admin
-      machine.send({ type: 'LOGOUT' });
+      machine.handle({ type: 'LOGOUT' });
       expect(machine.getContext().isAuthenticated).toBe(false);
 
-      machine.send({ type: 'GO_LOGIN' });
-      machine.send({ type: 'LOGIN', isAdmin: true });
+      machine.handle({ type: 'GO_LOGIN' });
+      machine.handle({ type: 'LOGIN', isAdmin: true });
 
       // Should be at home after login
       expect(machine.getActiveStateNodes().has('home')).toBe(true);
@@ -230,7 +230,7 @@ describe('Always Transitions - Integration', () => {
       expect(machine.getContext().isAdmin).toBe(true);
 
       // Now try admin - should work
-      machine.send({ type: 'GO_ADMIN' });
+      machine.handle({ type: 'GO_ADMIN' });
       expect(machine.getActiveStateNodes().has('admin')).toBe(true);
     });
   });
@@ -256,7 +256,7 @@ describe('Always Transitions - Integration', () => {
           needsShipping: ({ context }) => context.needsShipping,
           needsGiftWrap: ({ context }) => context.needsGiftWrap,
         },
-        reducers: {
+        assigns: {
           incrementStep: ({ context }) => ({ step: context.step + 1 }),
         },
         states: {
@@ -290,7 +290,7 @@ describe('Always Transitions - Integration', () => {
       const machine = new StateMachine(config).start();
 
       // With both options disabled, should skip directly to payment
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
 
       expect(machine.getActiveStateNodes().has('payment')).toBe(true);
     });
@@ -332,7 +332,7 @@ describe('Always Transitions - Integration', () => {
       expect(machine.getActiveStateNodes().has('green')).toBe(true);
 
       // Transition to yellow should immediately transition to red
-      machine.send({ type: 'TIMER' });
+      machine.handle({ type: 'TIMER' });
 
       expect(machine.getActiveStateNodes().has('red')).toBe(true);
     });
@@ -378,7 +378,7 @@ describe('Always Transitions - Integration', () => {
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       // Should auto-process through step2 and step3 to done
       expect(machine.getActiveStateNodes().has('app.workflow.done')).toBe(true);

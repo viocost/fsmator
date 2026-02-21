@@ -1,6 +1,6 @@
 /**
  * StateMachine class - orchestrates the state machine
- * Holds the root node, manages guards/reducers registry, compiles configuration
+ * Holds the root node, manages guards/assigns registry, compiles configuration
  */
 
 import { StateNode, NodeKind, NodeTransition } from './state-node';
@@ -9,7 +9,7 @@ import type {
   BaseEvent,
   StateMachineConfig,
   Guard,
-  Reducer,
+  Assign,
   StateConfig,
   GuardRef,
   ActivityMetadata,
@@ -17,6 +17,8 @@ import type {
   StateHistorySnapshot,
   MachineSnapshot,
   StateValue,
+  TransitionConfig,
+  TransitionTarget,
 } from './types';
 
 /**
@@ -44,7 +46,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
 
   // Registries
   private guards: Map<string | symbol, Guard<Context, Event>> = new Map();
-  private reducers: Map<string | symbol, Reducer<Context, Event>> = new Map();
+  private assigns: Map<string | symbol, Assign<Context, Event>> = new Map();
 
   // Node lookup by ID
   private nodesById: Map<string, StateNode> = new Map();
@@ -54,15 +56,15 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     this.debugEnabled = config.debug ?? false;
     this.timeTravelEnabled = config.timeTravel ?? false;
 
-    // Register guards and reducers
+    // Register guards and assigns
     if (config.guards) {
       for (const [key, guard] of Object.entries(config.guards)) {
         this.guards.set(key, guard);
       }
     }
-    if (config.reducers) {
-      for (const [key, reducer] of Object.entries(config.reducers)) {
-        this.reducers.set(key, reducer);
+    if (config.assigns) {
+      for (const [key, assign] of Object.entries(config.assigns)) {
+        this.assigns.set(key, assign);
       }
     }
 
@@ -74,8 +76,96 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   }
 
   /**
+   * Validate that all referenced guards and assigns have implementations
+   * @throws Error if any guard or assign is missing
+   */
+  private validateImplementations(): void {
+    const referencedGuards = new Set<string | symbol>();
+    const referencedAssigns = new Set<string | symbol>();
+
+    // Collect all guard and assign references from all nodes
+    for (const node of this.nodesById.values()) {
+      // Check on transitions
+      for (const [, transitions] of node.onTransitions.entries()) {
+        for (const transition of transitions) {
+          if (transition.guard) {
+            this.collectGuardRefs(transition.guard, referencedGuards);
+          }
+          if (transition.assign) {
+            referencedAssigns.add(transition.assign);
+          }
+        }
+      }
+
+      // Check always transitions
+      for (const transition of node.alwaysTransitions) {
+        if (transition.guard) {
+          this.collectGuardRefs(transition.guard, referencedGuards);
+        }
+        if (transition.assign) {
+          referencedAssigns.add(transition.assign);
+        }
+      }
+
+      // Check entry/exit actions (assigns)
+      for (const assignRef of node.onEntry) {
+        referencedAssigns.add(assignRef);
+      }
+      for (const assignRef of node.onExit) {
+        referencedAssigns.add(assignRef);
+      }
+    }
+
+    // Validate all referenced guards exist
+    const missingGuards: string[] = [];
+    for (const guardRef of referencedGuards) {
+      if (!this.guards.has(guardRef)) {
+        missingGuards.push(String(guardRef));
+      }
+    }
+
+    if (missingGuards.length > 0) {
+      throw new Error(`Missing guard implementation(s): ${missingGuards.sort().join(', ')}`);
+    }
+
+    // Validate all referenced assigns exist
+    const missingAssigns: string[] = [];
+    for (const assignRef of referencedAssigns) {
+      if (!this.assigns.has(assignRef)) {
+        missingAssigns.push(String(assignRef));
+      }
+    }
+
+    if (missingAssigns.length > 0) {
+      throw new Error(`Missing assign implementation(s): ${missingAssigns.sort().join(', ')}`);
+    }
+  }
+
+  /**
+   * Recursively collect guard references from a GuardRef (handles compound guards)
+   */
+  private collectGuardRefs(guardRef: GuardRef, collected: Set<string | symbol>): void {
+    if (typeof guardRef === 'string' || typeof guardRef === 'symbol') {
+      collected.add(guardRef);
+      return;
+    }
+
+    if (typeof guardRef === 'object' && 'type' in guardRef) {
+      if (guardRef.type === 'ref') {
+        collected.add(guardRef.id);
+      } else if (guardRef.type === 'and' || guardRef.type === 'or') {
+        for (const item of guardRef.items) {
+          this.collectGuardRefs(item, collected);
+        }
+      } else if (guardRef.type === 'not') {
+        this.collectGuardRefs(guardRef.item, collected);
+      }
+    }
+  }
+
+  /**
    * Start the state machine by activating initial states or evaluating always transitions after load
-   * Must be called before sending events
+   * Must be called before handling events
    * @returns this for chaining
    */
   start(): this {
@@ -84,6 +174,9 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     }
 
     this.log('🚀 Starting state machine');
+
+    // Validate all guards and assigns exist before starting
+    this.validateImplementations();
 
     if (this.loaded) {
       // If loaded from snapshot, just evaluate always transitions and mark as started
@@ -105,10 +198,31 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
 
   /**
    * Load a snapshot and restore machine state
-   * Performs sanity checks to ensure snapshot is valid for current schema
-   * Must call start() after load() to begin processing events
-   * @param snapshot - The snapshot to load
+   *
+   * Restores the machine from a previously saved snapshot. The machine must already have
+   * all required guard and assign implementations registered (either in constructor config
+   * or via hydrate()) before calling start().
+   *
+   * Performs sanity checks to ensure snapshot is valid for current schema.
+   * Must call start() after load() to begin processing events.
+   *
+   * @param snapshot - The snapshot to load (from getSnapshot() or dump())
    * @returns this for chaining
+   * @throws Error if machine is already started
+   * @throws Error if snapshot contains states not in schema
+   * @throws Error if snapshot configuration is invalid
+   *
+   * @example
+   * ```typescript
+   * // With implementations already in config
+   * const machine = new StateMachine(config).load(snapshot).start();
+   *
+   * // Loading without implementations - use hydrate() to add them
+   * const machine = new StateMachine(config)
+   *   .load(snapshot)
+   *   .hydrate({ guards, assigns })
+   *   .start();
+   * ```
    */
   load(snapshot: MachineSnapshot<Context>): this {
     if (this.started) {
@@ -180,6 +294,67 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   }
 
   /**
+   * Hydrate the state machine with runtime implementations
+   *
+   * Provides guard and assign implementations to a state machine that was loaded from
+   * a serialized snapshot. This is useful when:
+   * - Loading snapshots from storage (localStorage, database, etc.)
+   * - Working with configs from external libraries that don't include implementations
+   * - Separating state machine logic from serialized state
+   *
+   * Must be called before start(). Can be chained with load() and start().
+   *
+   * @param implementations - Object containing guards and/or assigns implementations
+   * @returns this for chaining
+   * @throws Error if machine is already started
+   *
+   * @example
+   * ```typescript
+   * // Load serialized snapshot and hydrate with implementations
+   * const snapshot = JSON.parse(localStorage.getItem('machineState'));
+   * const machine = new StateMachine(config)
+   *   .load(snapshot)
+   *   .hydrate({
+   *     guards: {
+   *       isPositive: ({ context }) => context.count > 0,
+   *     },
+   *     assigns: {
+   *       increment: ({ context }) => ({ count: context.count + 1 }),
+   *     },
+   *   })
+   *   .start();
+   * ```
+   */
+  hydrate(implementations: {
+    guards?: Record<string | symbol, Guard<Context, Event>>;
+    assigns?: Record<string | symbol, Assign<Context, Event>>;
+  }): this {
+    if (this.started) {
+      throw new Error('Cannot hydrate already started machine');
+    }
+
+    this.log('💧 Hydrating implementations');
+
+    // Register guards
+    if (implementations.guards) {
+      for (const [key, guard] of Object.entries(implementations.guards)) {
+        this.guards.set(key, guard);
+      }
+    }
+
+    // Register assigns
+    if (implementations.assigns) {
+      for (const [key, assign] of Object.entries(implementations.assigns)) {
+        this.assigns.set(key, assign);
+      }
+    }
+
+    this.log('✅ Implementations hydrated');
+
+    return this;
+  }
+
+  /**
    * Dump current machine state as a serialized JSON snapshot
    * Can be used to persist and restore machine state
    * @returns JSON string containing the snapshot
@@ -221,10 +396,10 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   }
 
   /**
-   * Get reducer function
+   * Get assign function
    */
-  getReducer(id: string | symbol): Reducer<Context, Event> | undefined {
-    return this.reducers.get(id);
+  getAssign(id: string | symbol): Assign<Context, Event> | undefined {
+    return this.assigns.get(id);
   }
 
   /**
@@ -349,7 +524,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     const snapshot = this.getSnapshot();
 
     // If we're not at the end of history, truncate everything after current position
-    // This happens when we rewind and then send new events (branching)
+    // This happens when we rewind and then handle new events (branching)
     if (this.historyIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.historyIndex + 1);
       this.log('🌿 History branched - truncated future history');
@@ -589,27 +764,33 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   /**
    * Log debug message if debug mode is enabled
    */
-  private log(message: string, ...args: any[]): void {
+  private log(message: string, ...args: unknown[]): void {
     if (this.debugEnabled) {
       console.log(message, ...args);
     }
   }
 
   /**
-   * Execute a reducer by reference and return updated context (pure)
+   * Execute an assign by reference and return updated context (pure)
    */
-  private executeReducer(
-    reducerRef: string | symbol,
+  private executeAssign(
+    assignRef: string | symbol,
     context: Context,
     event: Event,
     state: string
   ): Context {
-    const reducer = this.getReducer(reducerRef);
-    if (!reducer) {
-      throw new Error(`Reducer "${String(reducerRef)}" not found`);
+    const assign = this.getAssign(assignRef);
+    if (!assign) {
+      throw new Error(`Assign "${String(assignRef)}" not found`);
     }
-    this.log(`   ⚙️  Executing reducer: ${String(reducerRef)}`);
-    const updates = reducer({ context, event, state });
+    this.log(`   ⚙️  Executing assign: ${String(assignRef)}`);
+    const updates = assign({ context, event, state });
+
+    // If assign returns void, no context changes
+    if (updates === undefined) {
+      return context;
+    }
+
     const newContext = { ...context, ...updates };
 
     // Log context changes
@@ -621,17 +802,17 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   }
 
   /**
-   * Execute multiple reducers in sequence (pure)
+   * Execute multiple assigns in sequence (pure)
    */
-  private executeReducers(
-    reducerRefs: ReadonlyArray<string | symbol>,
+  private executeAssigns(
+    assignRefs: ReadonlyArray<string | symbol>,
     context: Context,
     event: Event,
     state: string
   ): Context {
     let newContext = context;
-    for (const ref of reducerRefs) {
-      newContext = this.executeReducer(ref, newContext, event, state);
+    for (const ref of assignRefs) {
+      newContext = this.executeAssign(ref, newContext, event, state);
     }
     return newContext;
   }
@@ -672,30 +853,30 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     // Iterate through all nodes and resolve their transition targets
     for (const node of this.nodesById.values()) {
       // Resolve on transitions
-      for (const [_eventType, transitions] of (node as any)._onTransitions.entries()) {
+      for (const [, transitions] of node.onTransitions.entries()) {
         for (const transition of transitions) {
-          if (transition.targetIds) {
-            transition.targetIds = transition.targetIds.map((targetId: string) => {
-              // If already resolved (contains dot or exists in nodesById), keep it
-              if (targetId.includes('.') || this.nodesById.has(targetId)) {
-                return targetId;
-              }
+          if (transition.targetId) {
+            const targetId = transition.targetId;
+            // If already resolved (contains dot or exists in nodesById), keep it
+            if (targetId.includes('.') || this.nodesById.has(targetId)) {
+              transition.targetId = targetId;
+            } else {
               // Otherwise, resolve from this node's context
-              return this.resolveTargetId(targetId, node);
-            });
+              transition.targetId = this.resolveTargetId(targetId, node);
+            }
           }
         }
       }
 
       // Resolve always transitions
       for (const transition of node.alwaysTransitions) {
-        if (transition.targetIds) {
-          (transition as any).targetIds = transition.targetIds.map((targetId: string) => {
-            if (targetId.includes('.') || this.nodesById.has(targetId)) {
-              return targetId;
-            }
-            return this.resolveTargetId(targetId, node);
-          });
+        if (transition.targetId) {
+          const targetId = transition.targetId;
+          if (targetId.includes('.') || this.nodesById.has(targetId)) {
+            transition.targetId = targetId;
+          } else {
+            transition.targetId = this.resolveTargetId(targetId, node);
+          }
         }
       }
     }
@@ -730,7 +911,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     this.log(`➡️  Entering state: ${node.id} (entry #${currentCounter + 1})`);
 
     // Step 1: Execute onEntry actions
-    let newContext = this.executeReducers(node.onEntry, context, event, node.id);
+    let newContext = this.executeAssigns(node.onEntry, context, event, node.id);
 
     // Step 2: Activate children recursively based on node kind (if followChildren)
     if (followChildren) {
@@ -792,7 +973,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     }
 
     // Execute onExit actions
-    return this.executeReducers(node.onExit, context, event, node.id);
+    return this.executeAssigns(node.onExit, context, event, node.id);
   }
 
   /**
@@ -938,7 +1119,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
           }
 
           // Found enabled transition
-          const targetDesc = transition.targetIds ? transition.targetIds.join(', ') : 'internal';
+          const targetDesc = transition.targetId ? transition.targetId : 'internal';
           this.log(`   ✓ Selected transition: ${node.id} → ${targetDesc}`);
           selectedTransitions.push({ source: node, transition }); // Use actual source node, not atomicNode
           seenTransitions.add(transitionKey);
@@ -1017,7 +1198,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
           }
 
           // Found enabled always transition
-          const targetDesc = transition.targetIds ? transition.targetIds.join(', ') : 'internal';
+          const targetDesc = transition.targetId ? transition.targetId : 'internal';
           this.log(`   ✓ Selected always transition: ${node.id} → ${targetDesc}`);
           selectedTransitions.push({ source: atomicNode, transition });
           break; // Stop at first enabled transition for this source
@@ -1048,20 +1229,20 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
     // Process each transition
     for (const { source, transition } of transitions) {
       // Handle internal transitions (no target = context-only)
-      if (!transition.targetIds || transition.targetIds.length === 0) {
+      if (!transition.targetId) {
         this.log(`\n🔀 Internal transition in: ${source.id}`);
         // Internal transition: just execute assign actions
         if (transition.assign) {
           const stateId = source.id;
-          newContext = this.executeReducer(transition.assign, newContext, event, stateId);
+          newContext = this.executeAssign(transition.assign, newContext, event, stateId);
         }
         continue;
       }
 
       // External transition: compute exit/entry sets
-      const targetId = transition.targetIds[0];
+      const targetId = transition.targetId;
       if (!targetId) {
-        throw new Error('Transition has empty targetIds array');
+        throw new Error('Transition has undefined targetId');
       }
 
       const target = this.nodesById.get(targetId);
@@ -1080,7 +1261,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
 
         // Execute transition assign
         if (transition.assign) {
-          newContext = this.executeReducer(transition.assign, newContext, event, source.id);
+          newContext = this.executeAssign(transition.assign, newContext, event, source.id);
         }
 
         // Re-enter the state
@@ -1159,7 +1340,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       if (transition.assign) {
         const stateId = source.id;
         this.log(`   ⚙️  Executing transition assign`);
-        newContext = this.executeReducer(transition.assign, newContext, event, stateId);
+        newContext = this.executeAssign(transition.assign, newContext, event, stateId);
       }
 
       // Execute entry actions (root to leaf)
@@ -1187,10 +1368,10 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    * 6. Update configuration and context
    * 7. Evaluate always transitions until none are enabled (microsteps)
    */
-  send(event: Event): void {
+  handle(event: Event): void {
     // Check if machine is started
     if (!this.started) {
-      throw new Error('Cannot send events: machine not started. Call start() first.');
+      throw new Error('Cannot handle events: machine not started. Call start() first.');
     }
 
     // If machine is halted, return immediately without processing
@@ -1273,9 +1454,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
       }
 
       // Check if all transitions are internal (no target)
-      const allInternal = alwaysTransitions.every(
-        ({ transition }) => !transition.targetIds || transition.targetIds.length === 0
-      );
+      const allInternal = alwaysTransitions.every(({ transition }) => !transition.targetId);
 
       this.log(
         `\n⚡ Processing ${alwaysTransitions.length} always transition(s) (iteration ${iterations})`
@@ -1416,13 +1595,18 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   }
 
   /**
-   * Compile on transitions for a node
+   * Compile transitions from config
    */
-  private compileTransitions(node: StateNode, onConfig: Record<string, any>): void {
-    for (const [eventType, transitionConfig] of Object.entries(onConfig)) {
-      const transitions = Array.isArray(transitionConfig)
-        ? transitionConfig.map((t) => this.compileTransition(t, node))
-        : [this.compileTransition(transitionConfig, node)];
+  private compileTransitions(
+    node: StateNode,
+    onConfig: Partial<Record<string, TransitionTarget>>
+  ): void {
+    for (const [eventType, transitionTarget] of Object.entries(onConfig)) {
+      if (!transitionTarget) continue; // Skip undefined values from Partial
+
+      const transitions = Array.isArray(transitionTarget)
+        ? transitionTarget.map((t) => this.compileTransition(t, node))
+        : [this.compileTransition(transitionTarget, node)];
 
       node.addOnTransitions(eventType, transitions);
     }
@@ -1432,26 +1616,29 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    * Compile a single transition
    * Note: Target IDs are stored as-is and resolved in a second pass
    */
-  private compileTransition(transitionConfig: any, _contextNode: StateNode): NodeTransition {
+  private compileTransition(
+    transitionTarget: string | TransitionConfig,
+    _contextNode: StateNode
+  ): NodeTransition {
     // Simple string target
-    if (typeof transitionConfig === 'string') {
+    if (typeof transitionTarget === 'string') {
       return {
-        targetIds: [transitionConfig], // Store as-is, resolve later
+        targetId: transitionTarget, // Store as-is, resolve later
       };
     }
 
     const transition: NodeTransition = {};
 
-    if (transitionConfig.target) {
-      transition.targetIds = [transitionConfig.target]; // Store as-is, resolve later
+    if (transitionTarget.target) {
+      transition.targetId = transitionTarget.target; // Store as-is, resolve later
     }
 
-    if (transitionConfig.guard) {
-      transition.guard = transitionConfig.guard;
+    if (transitionTarget.guard) {
+      transition.guard = transitionTarget.guard;
     }
 
-    if (transitionConfig.assign) {
-      transition.assign = transitionConfig.assign;
+    if (transitionTarget.assign) {
+      transition.assign = transitionTarget.assign;
     }
 
     return transition;

@@ -38,7 +38,7 @@ describe('Flat Machine Integration (Traffic Light)', () => {
           },
         },
       },
-      reducers: {
+      assigns: {
         incrementCycle: ({ context }) => ({ cycleCount: context.cycleCount + 1 }),
         resetCycle: () => ({ cycleCount: 0 }),
       },
@@ -58,17 +58,17 @@ describe('Flat Machine Integration (Traffic Light)', () => {
     const machine = createTrafficLightMachine();
 
     // red → yellow
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
     expect(machine.getActiveStateNodes().has('yellow')).toBe(true);
     expect(machine.getContext().cycleCount).toBe(1);
 
     // yellow → green
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
     expect(machine.getActiveStateNodes().has('green')).toBe(true);
     expect(machine.getContext().cycleCount).toBe(1);
 
     // green → red
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
     expect(machine.getActiveStateNodes().has('red')).toBe(true);
     expect(machine.getContext().cycleCount).toBe(1);
   });
@@ -76,17 +76,17 @@ describe('Flat Machine Integration (Traffic Light)', () => {
   it('should increment cycle count on red to yellow transition', () => {
     const machine = createTrafficLightMachine();
 
-    machine.send({ type: 'NEXT' }); // red → yellow (cycle 1)
-    machine.send({ type: 'NEXT' }); // yellow → green
-    machine.send({ type: 'NEXT' }); // green → red
+    machine.handle({ type: 'NEXT' }); // red → yellow (cycle 1)
+    machine.handle({ type: 'NEXT' }); // yellow → green
+    machine.handle({ type: 'NEXT' }); // green → red
 
-    machine.send({ type: 'NEXT' }); // red → yellow (cycle 2)
+    machine.handle({ type: 'NEXT' }); // red → yellow (cycle 2)
     expect(machine.getContext().cycleCount).toBe(2);
 
-    machine.send({ type: 'NEXT' }); // yellow → green
-    machine.send({ type: 'NEXT' }); // green → red
+    machine.handle({ type: 'NEXT' }); // yellow → green
+    machine.handle({ type: 'NEXT' }); // green → red
 
-    machine.send({ type: 'NEXT' }); // red → yellow (cycle 3)
+    machine.handle({ type: 'NEXT' }); // red → yellow (cycle 3)
     expect(machine.getContext().cycleCount).toBe(3);
   });
 
@@ -94,16 +94,16 @@ describe('Flat Machine Integration (Traffic Light)', () => {
     const machine = createTrafficLightMachine();
 
     // Do a few cycles
-    machine.send({ type: 'NEXT' }); // red → yellow (cycle 1)
-    machine.send({ type: 'NEXT' }); // yellow → green
-    machine.send({ type: 'NEXT' }); // green → red
-    machine.send({ type: 'NEXT' }); // red → yellow (cycle 2)
-    machine.send({ type: 'NEXT' }); // yellow → green
+    machine.handle({ type: 'NEXT' }); // red → yellow (cycle 1)
+    machine.handle({ type: 'NEXT' }); // yellow → green
+    machine.handle({ type: 'NEXT' }); // green → red
+    machine.handle({ type: 'NEXT' }); // red → yellow (cycle 2)
+    machine.handle({ type: 'NEXT' }); // yellow → green
 
     expect(machine.getContext().cycleCount).toBe(2);
 
     // Reset from green
-    machine.send({ type: 'RESET' });
+    machine.handle({ type: 'RESET' });
     expect(machine.getActiveStateNodes().has('red')).toBe(true);
     expect(machine.getContext().cycleCount).toBe(0);
   });
@@ -112,19 +112,19 @@ describe('Flat Machine Integration (Traffic Light)', () => {
     const machine = createTrafficLightMachine();
 
     // Complete cycle 1
-    machine.send({ type: 'NEXT' }); // red → yellow
-    machine.send({ type: 'NEXT' }); // yellow → green
-    machine.send({ type: 'NEXT' }); // green → red
+    machine.handle({ type: 'NEXT' }); // red → yellow
+    machine.handle({ type: 'NEXT' }); // yellow → green
+    machine.handle({ type: 'NEXT' }); // green → red
 
     // Complete cycle 2
-    machine.send({ type: 'NEXT' }); // red → yellow
-    machine.send({ type: 'NEXT' }); // yellow → green
-    machine.send({ type: 'NEXT' }); // green → red
+    machine.handle({ type: 'NEXT' }); // red → yellow
+    machine.handle({ type: 'NEXT' }); // yellow → green
+    machine.handle({ type: 'NEXT' }); // green → red
 
     // Complete cycle 3
-    machine.send({ type: 'NEXT' }); // red → yellow
-    machine.send({ type: 'NEXT' }); // yellow → green
-    machine.send({ type: 'NEXT' }); // green → red
+    machine.handle({ type: 'NEXT' }); // red → yellow
+    machine.handle({ type: 'NEXT' }); // yellow → green
+    machine.handle({ type: 'NEXT' }); // green → red
 
     expect(machine.getActiveStateNodes().has('red')).toBe(true);
     expect(machine.getContext().cycleCount).toBe(3);

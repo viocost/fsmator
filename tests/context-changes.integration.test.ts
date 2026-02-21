@@ -52,7 +52,7 @@ describe('Context Changes Integration (Shopping Cart)', () => {
           },
         },
       },
-      reducers: {
+      assigns: {
         addItem: ({ context, event }) => {
           if (event.type !== 'ADD_ITEM') return {};
 
@@ -117,7 +117,7 @@ describe('Context Changes Integration (Shopping Cart)', () => {
   it('should add item to cart', () => {
     const machine = createShoppingMachine();
 
-    machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
 
     expect(machine.getContext().cart).toHaveLength(1);
     expect(machine.getContext().cart[0]).toEqual({
@@ -132,8 +132,8 @@ describe('Context Changes Integration (Shopping Cart)', () => {
   it('should add multiple different items', () => {
     const machine = createShoppingMachine();
 
-    machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
-    machine.send({ type: 'ADD_ITEM', item: { id: '2', name: 'Mouse', price: 29.99 } });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '2', name: 'Mouse', price: 29.99 } });
 
     expect(machine.getContext().cart).toHaveLength(2);
     expect(machine.getContext().total).toBeCloseTo(1029.98, 2);
@@ -142,8 +142,8 @@ describe('Context Changes Integration (Shopping Cart)', () => {
   it('should increment quantity when adding same item', () => {
     const machine = createShoppingMachine();
 
-    machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
-    machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
 
     expect(machine.getContext().cart).toHaveLength(1);
     expect(machine.getContext().cart[0]?.quantity).toBe(2);
@@ -153,9 +153,9 @@ describe('Context Changes Integration (Shopping Cart)', () => {
   it('should remove item from cart', () => {
     const machine = createShoppingMachine();
 
-    machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
-    machine.send({ type: 'ADD_ITEM', item: { id: '2', name: 'Mouse', price: 29.99 } });
-    machine.send({ type: 'REMOVE_ITEM', itemId: '1' });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '2', name: 'Mouse', price: 29.99 } });
+    machine.handle({ type: 'REMOVE_ITEM', itemId: '1' });
 
     expect(machine.getContext().cart).toHaveLength(1);
     expect(machine.getContext().cart[0]?.id).toBe('2');
@@ -165,8 +165,8 @@ describe('Context Changes Integration (Shopping Cart)', () => {
   it('should update item quantity', () => {
     const machine = createShoppingMachine();
 
-    machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Mouse', price: 29.99 } });
-    machine.send({ type: 'UPDATE_QUANTITY', itemId: '1', quantity: 5 });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Mouse', price: 29.99 } });
+    machine.handle({ type: 'UPDATE_QUANTITY', itemId: '1', quantity: 5 });
 
     expect(machine.getContext().cart[0]?.quantity).toBe(5);
     expect(machine.getContext().total).toBeCloseTo(149.95, 2);
@@ -175,7 +175,7 @@ describe('Context Changes Integration (Shopping Cart)', () => {
   it('should apply discount', () => {
     const machine = createShoppingMachine();
 
-    machine.send({ type: 'APPLY_DISCOUNT', percent: 10 });
+    machine.handle({ type: 'APPLY_DISCOUNT', percent: 10 });
 
     expect(machine.getContext().discount).toBe(10);
   });
@@ -183,7 +183,7 @@ describe('Context Changes Integration (Shopping Cart)', () => {
   it('should login user', () => {
     const machine = createShoppingMachine();
 
-    machine.send({ type: 'LOGIN', user: { name: 'John Doe', email: 'john@example.com' } });
+    machine.handle({ type: 'LOGIN', user: { name: 'John Doe', email: 'john@example.com' } });
 
     expect(machine.getContext().user).toEqual({ name: 'John Doe', email: 'john@example.com' });
   });
@@ -191,8 +191,8 @@ describe('Context Changes Integration (Shopping Cart)', () => {
   it('should logout user', () => {
     const machine = createShoppingMachine();
 
-    machine.send({ type: 'LOGIN', user: { name: 'John Doe', email: 'john@example.com' } });
-    machine.send({ type: 'LOGOUT' });
+    machine.handle({ type: 'LOGIN', user: { name: 'John Doe', email: 'john@example.com' } });
+    machine.handle({ type: 'LOGOUT' });
 
     expect(machine.getContext().user).toBeNull();
   });
@@ -200,8 +200,8 @@ describe('Context Changes Integration (Shopping Cart)', () => {
   it('should transition to checkout state', () => {
     const machine = createShoppingMachine();
 
-    machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
-    machine.send({ type: 'CHECKOUT' });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
+    machine.handle({ type: 'CHECKOUT' });
 
     expect(machine.getActiveStateNodes().has('checkout')).toBe(true);
   });
@@ -209,10 +209,10 @@ describe('Context Changes Integration (Shopping Cart)', () => {
   it('should reset cart after checkout', () => {
     const machine = createShoppingMachine();
 
-    machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
-    machine.send({ type: 'APPLY_DISCOUNT', percent: 10 });
-    machine.send({ type: 'CHECKOUT' });
-    machine.send({ type: 'RESET' });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
+    machine.handle({ type: 'APPLY_DISCOUNT', percent: 10 });
+    machine.handle({ type: 'CHECKOUT' });
+    machine.handle({ type: 'RESET' });
 
     expect(machine.getActiveStateNodes().has('browsing')).toBe(true);
     expect(machine.getContext().cart).toEqual([]);
@@ -224,16 +224,16 @@ describe('Context Changes Integration (Shopping Cart)', () => {
     const machine = createShoppingMachine();
 
     // Add items
-    machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
-    machine.send({ type: 'ADD_ITEM', item: { id: '2', name: 'Mouse', price: 29.99 } });
-    machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } }); // 2 laptops
+    machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '2', name: 'Mouse', price: 29.99 } });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } }); // 2 laptops
 
     // Update mouse quantity
-    machine.send({ type: 'UPDATE_QUANTITY', itemId: '2', quantity: 3 });
+    machine.handle({ type: 'UPDATE_QUANTITY', itemId: '2', quantity: 3 });
 
     // Login and apply discount
-    machine.send({ type: 'LOGIN', user: { name: 'Alice', email: 'alice@example.com' } });
-    machine.send({ type: 'APPLY_DISCOUNT', percent: 15 });
+    machine.handle({ type: 'LOGIN', user: { name: 'Alice', email: 'alice@example.com' } });
+    machine.handle({ type: 'APPLY_DISCOUNT', percent: 15 });
 
     // Verify final state
     expect(machine.getContext().cart).toHaveLength(2);
@@ -247,10 +247,10 @@ describe('Context Changes Integration (Shopping Cart)', () => {
   it('should maintain immutability of original cart', () => {
     const machine = createShoppingMachine();
 
-    machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
     const cart1 = machine.getContext().cart;
 
-    machine.send({ type: 'ADD_ITEM', item: { id: '2', name: 'Mouse', price: 29.99 } });
+    machine.handle({ type: 'ADD_ITEM', item: { id: '2', name: 'Mouse', price: 29.99 } });
     const cart2 = machine.getContext().cart;
 
     // Original cart should not be modified

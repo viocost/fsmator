@@ -48,10 +48,10 @@ describe('StateMachine.getStateValue()', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toBe('active');
 
-      machine.send({ type: 'BACK' });
+      machine.handle({ type: 'BACK' });
       expect(machine.getStateValue()).toBe('idle');
     });
   });
@@ -100,10 +100,10 @@ describe('StateMachine.getStateValue()', () => {
       const machine = new StateMachine(config).start();
       expect(machine.getStateValue()).toEqual({ form: 'editing' });
 
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ form: 'validating' });
 
-      machine.send({ type: 'BACK' });
+      machine.handle({ type: 'BACK' });
       expect(machine.getStateValue()).toEqual({ form: 'editing' });
     });
 
@@ -139,14 +139,14 @@ describe('StateMachine.getStateValue()', () => {
         },
       });
 
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({
         app: {
           form: 'validating',
         },
       });
 
-      machine.send({ type: 'SUBMIT' });
+      machine.handle({ type: 'SUBMIT' });
       expect(machine.getStateValue()).toEqual({
         app: {
           form: 'submitting',
@@ -181,10 +181,10 @@ describe('StateMachine.getStateValue()', () => {
       const machine = new StateMachine(config).start();
       expect(machine.getStateValue()).toEqual({ stateA: 'childA1' });
 
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ stateB: 'childB1' });
 
-      machine.send({ type: 'BACK' });
+      machine.handle({ type: 'BACK' });
       expect(machine.getStateValue()).toEqual({ stateA: 'childA1' });
     });
   });
@@ -272,7 +272,7 @@ describe('StateMachine.getStateValue()', () => {
       const machine = new StateMachine(config).start();
 
       // Change playback, volume stays same
-      machine.send({ type: 'PLAY' });
+      machine.handle({ type: 'PLAY' });
       expect(machine.getStateValue()).toEqual({
         player: {
           playback: 'playing',
@@ -281,7 +281,7 @@ describe('StateMachine.getStateValue()', () => {
       });
 
       // Change volume, playback stays same
-      machine.send({ type: 'MUTE' });
+      machine.handle({ type: 'MUTE' });
       expect(machine.getStateValue()).toEqual({
         player: {
           playback: 'playing',
@@ -290,7 +290,7 @@ describe('StateMachine.getStateValue()', () => {
       });
 
       // Change both
-      machine.send({ type: 'PAUSE' });
+      machine.handle({ type: 'PAUSE' });
       expect(machine.getStateValue()).toEqual({
         player: {
           playback: 'paused',
@@ -298,7 +298,7 @@ describe('StateMachine.getStateValue()', () => {
         },
       });
 
-      machine.send({ type: 'UNMUTE' });
+      machine.handle({ type: 'UNMUTE' });
       expect(machine.getStateValue()).toEqual({
         player: {
           playback: 'paused',
@@ -352,7 +352,7 @@ describe('StateMachine.getStateValue()', () => {
         },
       });
 
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({
         app: {
           regionA: {
@@ -362,7 +362,7 @@ describe('StateMachine.getStateValue()', () => {
         },
       });
 
-      machine.send({ type: 'PLAY' });
+      machine.handle({ type: 'PLAY' });
       expect(machine.getStateValue()).toEqual({
         app: {
           regionA: {
@@ -399,7 +399,7 @@ describe('StateMachine.getStateValue()', () => {
         },
       });
 
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toBe('green');
     });
   });
@@ -425,7 +425,7 @@ describe('StateMachine.getStateValue()', () => {
       const machine = new StateMachine(config).start();
       expect(machine.getStateValue()).toBe('idle');
 
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ form: 'editing' });
     });
 
@@ -449,7 +449,7 @@ describe('StateMachine.getStateValue()', () => {
       const machine = new StateMachine(config).start();
       expect(machine.getStateValue()).toEqual({ form: 'editing' });
 
-      machine.send({ type: 'SUBMIT' });
+      machine.handle({ type: 'SUBMIT' });
       expect(machine.getStateValue()).toBe('success');
     });
 
@@ -488,7 +488,7 @@ describe('StateMachine.getStateValue()', () => {
       const machine = new StateMachine(config).start();
       expect(machine.getStateValue()).toEqual({ form: 'editing' });
 
-      machine.send({ type: 'SUBMIT' });
+      machine.handle({ type: 'SUBMIT' });
       expect(machine.getStateValue()).toEqual({
         player: {
           playback: 'stopped',
@@ -516,7 +516,7 @@ describe('StateMachine.getStateValue()', () => {
       const machine = new StateMachine(config).start();
       expect(machine.getStateValue()).toBe('active');
 
-      machine.send({ type: 'SUBMIT' });
+      machine.handle({ type: 'SUBMIT' });
       expect(machine.getStateValue()).toBe('done');
       expect(machine.isHalted()).toBe(true);
     });
@@ -546,10 +546,10 @@ describe('StateMachine.getStateValue()', () => {
       const machine = new StateMachine(config).start();
       expect(machine.getStateValue()).toEqual({ workflow: 'step1' });
 
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ workflow: 'step2' });
 
-      machine.send({ type: 'SUBMIT' });
+      machine.handle({ type: 'SUBMIT' });
       expect(machine.getStateValue()).toEqual({ workflow: 'complete' });
       expect(machine.isHalted()).toBe(true);
     });

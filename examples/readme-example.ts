@@ -16,7 +16,7 @@ const counterConfig: StateMachineConfig<CounterContext, CounterEvents> = {
   initialContext: { count: 0 },
   initial: 'active',
 
-  reducers: {
+  assigns: {
     increment: ({ context }) => ({ count: context.count + 1 }),
     decrement: ({ context }) => ({ count: context.count - 1 }),
     reset: () => ({ count: 0 }),
@@ -35,14 +35,14 @@ const counterConfig: StateMachineConfig<CounterContext, CounterEvents> = {
 
 const counterMachine = new StateMachine(counterConfig);
 
-counterMachine.send({ type: 'INCREMENT' });
-counterMachine.send({ type: 'INCREMENT' });
+counterMachine.handle({ type: 'INCREMENT' });
+counterMachine.handle({ type: 'INCREMENT' });
 console.log('Count after 2 increments:', counterMachine.getContext().count); // 2
 
-counterMachine.send({ type: 'DECREMENT' });
+counterMachine.handle({ type: 'DECREMENT' });
 console.log('Count after decrement:', counterMachine.getContext().count); // 1
 
-counterMachine.send({ type: 'RESET' });
+counterMachine.handle({ type: 'RESET' });
 console.log('Count after reset:', counterMachine.getContext().count); // 0
 
 // Hierarchical states example
@@ -60,7 +60,7 @@ const formConfig: StateMachineConfig<FormContext, FormEvents> = {
   },
   initial: 'editing',
 
-  reducers: {
+  assigns: {
     logEdit: ({ context }) => ({ log: [...context.log, 'editing'] }),
     logValidate: ({ context }) => ({ log: [...context.log, 'validating'] }),
     logSubmit: ({ context }) => ({ log: [...context.log, 'submitting'] }),
@@ -97,11 +97,11 @@ const formConfig: StateMachineConfig<FormContext, FormEvents> = {
 const formMachine = new StateMachine(formConfig);
 console.log('Initial log:', formMachine.getContext().log); // ['editing']
 
-formMachine.send({ type: 'SUBMIT' });
+formMachine.handle({ type: 'SUBMIT' });
 console.log('After submit:', formMachine.getContext().log); // ['editing', 'submitting', 'validating']
 console.log('Configuration:', Array.from(formMachine.getActiveStateNodes())); // ['submitting', 'submitting.validating']
 
-formMachine.send({ type: 'SUCCESS' });
+formMachine.handle({ type: 'SUCCESS' });
 console.log('After success:', formMachine.getContext().log); // ['editing', 'submitting', 'validating', 'success']
 
 export { counterMachine, formMachine };

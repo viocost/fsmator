@@ -15,11 +15,13 @@ export function runParallelEdgeCaseExample() {
   const config: StateMachineConfig<EdgeCaseContext, EdgeCaseEvent> = {
     initial: 'root',
     initialContext: { logs: [] },
-    reducers: {
+    assigns: {
       // Broadcast Loggers
       logRegionA: ({ context }) => ({ logs: [...context.logs, '✅ Region A caught it'] }),
       logRegionB: ({ context }) => ({ logs: [...context.logs, '✅ Region B caught it'] }),
-      logParent: ({ context }) => ({ logs: [...context.logs, '❌ PARENT fired (Error: Should be shadowed!)'] }),
+      logParent: ({ context }) => ({
+        logs: [...context.logs, '❌ PARENT fired (Error: Should be shadowed!)'],
+      }),
     },
     states: {
       root: {
@@ -27,7 +29,7 @@ export function runParallelEdgeCaseExample() {
         // PARENT HANDLER
         // This should NEVER fire if any child handles the event.
         on: {
-          MULTI_FIRE: { assign: 'logParent' }
+          MULTI_FIRE: { assign: 'logParent' },
         },
         states: {
           // REGION A: Handles the event
@@ -36,10 +38,10 @@ export function runParallelEdgeCaseExample() {
             states: {
               active: {
                 on: {
-                  MULTI_FIRE: { assign: 'logRegionA' }
-                }
-              }
-            }
+                  MULTI_FIRE: { assign: 'logRegionA' },
+                },
+              },
+            },
           },
 
           // REGION B: ALSO Handles the event
@@ -49,10 +51,10 @@ export function runParallelEdgeCaseExample() {
             states: {
               active: {
                 on: {
-                  MULTI_FIRE: { assign: 'logRegionB' }
-                }
-              }
-            }
+                  MULTI_FIRE: { assign: 'logRegionB' },
+                },
+              },
+            },
           },
 
           // REGION C: Ignores the event
@@ -60,18 +62,18 @@ export function runParallelEdgeCaseExample() {
           regionC: {
             initial: 'idle',
             states: {
-              idle: {}
-            }
-          }
-        }
-      }
-    }
+              idle: {},
+            },
+          },
+        },
+      },
+    },
   };
 
   const machine = new StateMachine(config).start();
 
   console.log('\n--- Sending MULTI_FIRE Event ---');
-  machine.send({ type: 'MULTI_FIRE' });
+  machine.handle({ type: 'MULTI_FIRE' });
 
   const logs = machine.getContext().logs;
   console.log('Logs:', logs);

@@ -20,8 +20,8 @@ export function runEdgeCaseExample() {
   const config: StateMachineConfig<EdgeCaseContext, EdgeCaseEvent> = {
     initial: 'root',
     initialContext: { logs: [] },
-    // We register specific reducers to log every step of the lifecycle
-    reducers: {
+    // We register specific assigns to log every step of the lifecycle
+    assigns: {
       // --- Transient Lifecycle Loggers ---
       logEnterParent: ({ context }) => ({ logs: [...context.logs, '1. ENTER Parent'] }),
       logEnterChild: ({ context }) => ({ logs: [...context.logs, '2. ENTER Child'] }),
@@ -31,7 +31,9 @@ export function runEdgeCaseExample() {
 
       // --- Shadowing Loggers ---
       logChildHandled: ({ context }) => ({ logs: [...context.logs, '✅ Child Handled PING'] }),
-      logParentHandled: ({ context }) => ({ logs: [...context.logs, '❌ Parent Handled PING (Error: Should be Shadowed!)'] }),
+      logParentHandled: ({ context }) => ({
+        logs: [...context.logs, '❌ Parent Handled PING (Error: Should be Shadowed!)'],
+      }),
     },
     states: {
       root: {
@@ -40,7 +42,7 @@ export function runEdgeCaseExample() {
         // In XState, if *any* child handles 'PING', this parent handler must be BLOCKED.
         // If your lib is correct, 'logParentHandled' will NEVER appear in the logs.
         on: {
-          PING: { assign: 'logParentHandled' }
+          PING: { assign: 'logParentHandled' },
         },
         states: {
           // ============================================================
@@ -62,14 +64,14 @@ export function runEdgeCaseExample() {
                 states: {
                   transientChild: {
                     onEntry: ['logEnterChild'],
-                    onExit: ['logExitChild']
-                  }
-                }
+                    onExit: ['logExitChild'],
+                  },
+                },
               },
               stable: {
-                onEntry: ['logArrivedStable']
-              }
-            }
+                onEntry: ['logArrivedStable'],
+              },
+            },
           },
 
           // ============================================================
@@ -81,10 +83,10 @@ export function runEdgeCaseExample() {
             states: {
               listening: {
                 on: {
-                  PING: { assign: 'logChildHandled' }
-                }
-              }
-            }
+                  PING: { assign: 'logChildHandled' },
+                },
+              },
+            },
           },
 
           // ============================================================
@@ -95,12 +97,12 @@ export function runEdgeCaseExample() {
           silentRegion: {
             initial: 'idle',
             states: {
-              idle: {}
-            }
-          }
-        }
-      }
-    }
+              idle: {},
+            },
+          },
+        },
+      },
+    },
   };
 
   const machine = new StateMachine(config).start();

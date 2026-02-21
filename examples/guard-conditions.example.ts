@@ -122,7 +122,7 @@ export function runGuardConditionsExample() {
         return Boolean(valid);
       },
     },
-    reducers: {
+    assigns: {
       logLoggedOut: () => {
         console.log('    [App] User is logged out');
         return {};
@@ -175,32 +175,32 @@ export function runGuardConditionsExample() {
   const machine = new StateMachine(config);
 
   console.log('\n--- Scenario 1: Successful login ---');
-  machine.send({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'secret123' });
-  machine.send({ type: 'SUBMIT' });
-  machine.send({ type: 'SUCCESS', token: 'abc123xyz' });
+  machine.handle({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'secret123' });
+  machine.handle({ type: 'SUBMIT' });
+  machine.handle({ type: 'SUCCESS', token: 'abc123xyz' });
 
   console.log('\n--- Scenario 2: Logout ---');
-  machine.send({ type: 'LOGOUT' });
+  machine.handle({ type: 'LOGOUT' });
 
   console.log('\n--- Scenario 3: Failed login attempts leading to lock ---');
-  machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
-  machine.send({ type: 'SUBMIT' });
-  machine.send({ type: 'FAILURE' }); // Attempt 1
+  machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
+  machine.handle({ type: 'SUBMIT' });
+  machine.handle({ type: 'FAILURE' }); // Attempt 1
 
-  machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'stillwrong' });
-  machine.send({ type: 'SUBMIT' });
-  machine.send({ type: 'FAILURE' }); // Attempt 2
+  machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'stillwrong' });
+  machine.handle({ type: 'SUBMIT' });
+  machine.handle({ type: 'FAILURE' }); // Attempt 2
 
-  machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'nope' });
-  machine.send({ type: 'SUBMIT' });
-  machine.send({ type: 'FAILURE' }); // Attempt 3 - should lock
+  machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'nope' });
+  machine.handle({ type: 'SUBMIT' });
+  machine.handle({ type: 'FAILURE' }); // Attempt 3 - should lock
 
   console.log('\n--- Scenario 4: Try to login while locked (guard prevents) ---');
-  machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'correct' });
-  machine.send({ type: 'SUBMIT' }); // Guard should prevent transition
+  machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'correct' });
+  machine.handle({ type: 'SUBMIT' }); // Guard should prevent transition
 
   console.log('\n--- Scenario 5: Unlock account ---');
-  machine.send({ type: 'UNLOCK' });
+  machine.handle({ type: 'UNLOCK' });
 
   console.log('\n--- Final State ---');
   console.log('Configuration:', Array.from(machine.getActiveStateNodes()));

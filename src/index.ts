@@ -5,17 +5,13 @@ export type {
   EventByType,
   Guard,
   GuardArgs,
-  Reducer,
-  ReducerArgs,
-  TypedReducer,
-  TypedGuard,
+  Assign,
+  AssignArgs,
   GuardRef,
   TransitionConfig,
   TransitionTarget,
   OnTransitions,
-  AlwaysTransition,
   StateConfig,
-  StateMap,
   StateMachineConfig,
   StateValue,
   ActivityInstance,
@@ -26,6 +22,9 @@ export type {
 
 // Export guard combination helpers
 export { and, or, not } from './types';
+
+// Export utility functions for defining assigns and guards
+export { defineAssigns, defineGuards } from './util';
 
 // Export StateMachine class
 export { StateMachine } from './state-machine';

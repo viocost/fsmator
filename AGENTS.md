@@ -34,7 +34,7 @@ pnpm exec vitest state-node.test.ts     # Alternative using vitest directly
 
 ## Architecture Overview
 
-**State Reducer** is a synchronous state machine library with XState-compatible semantics:
+**Fsmator** is a synchronous state machine library with XState-compatible semantics:
 
 - **Pure functions only**: All state transitions are immutable and deterministic
 - **No side effects**: No async operations, no invocations, no spawn
@@ -45,14 +45,14 @@ pnpm exec vitest state-node.test.ts     # Alternative using vitest directly
 
 1. **StateMachine** (`src/state-machine.ts`): Orchestrates everything, holds configuration and context
 2. **StateNode** (`src/state-node.ts`): Represents nodes in the state hierarchy tree
-3. **Types** (`src/types.ts`): All type definitions including guards, reducers, transitions
+3. **Types** (`src/types.ts`): All type definitions including guards, assigns, transitions
 
 ## Code Style Guidelines
 
 ### Imports
 
 - Use named imports from local modules: `import { StateMachine } from './state-machine'`
-- Use type-only imports when importing only types: `import type { Guard, Reducer } from './types'`
+- Use type-only imports when importing only types: `import type { Guard, Assign } from './types'`
 - Group imports: external packages first, then local modules, then types
 - Order: vitest imports → local class imports → type imports
 
@@ -114,7 +114,7 @@ import type { StateMachineConfig } from './types';
  * 5. Execute entries (root to leaf order)
  * 6. Update configuration and context
  */
-send(event: Event): void {
+handle(event: Event): void {
   // Implementation
 }
 ```
@@ -183,7 +183,7 @@ this.configuration.add(nodeId); // Mutation!
 
 - **Two-pass compilation**: Build node tree first, then resolve target IDs (handles sibling references)
 - **Configuration is Set<string>**: Active node IDs stored in a Set
-- **Context is immutable**: All reducers return `Partial<Context>`, merged with spread
+- **Context is immutable**: All assigns return `Partial<Context>`, merged with spread
 - **Guards can be compound**: Support `and`, `or`, `not` logical combinators
 - **Transitions can be**: internal (no target), self-transitions, or external (with LCA computation)
 
@@ -199,12 +199,12 @@ private log(message: string, ...args: any[]): void {
 }
 ```
 
-### Executing Reducers (Pure)
+### Executing Assigns (Pure)
 
 ```typescript
-private executeReducer(reducerRef: string | symbol, context: Context, event: Event, state: string): Context {
-  const reducer = this.getReducer(reducerRef);
-  const updates = reducer({ context, event, state });
+private executeAssign(assignRef: string | symbol, context: Context, event: Event, state: string): Context {
+  const assign = this.getAssign(assignRef);
+  const updates = assign({ context, event, state });
   return { ...context, ...updates };  // Immutable update
 }
 ```
@@ -223,8 +223,8 @@ private evaluateGuard(guardRef: GuardRef, context: Context, event: Event, state:
 
 ## Notes for Agents
 
-- This is a **pure reducer library**, not a full state machine framework like XState
+- This is a **pure assign library**, not a full state machine framework like XState
 - No async, no side effects, no actors/spawning/invocations
 - All state changes happen synchronously in a single "macro step"
-- Perfect for integration with Redux, Zustand, or React's useReducer
+- Perfect for integration with Redux, Zustand, or any state management solution
 - XState-compatible transition semantics (LCA algorithm) for predictable behavior

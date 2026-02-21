@@ -102,7 +102,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
           return event.token && event.token.length > 0;
         },
       },
-      reducers: {
+      assigns: {
         setCredentials: ({ event }) => {
           if (event.type !== 'ENTER_CREDENTIALS') return {};
           return {
@@ -150,7 +150,7 @@ describe('Guard Conditions Integration (Authentication)', () => {
   it('should not transition without credentials', () => {
     const machine = createAuthMachine();
 
-    machine.send({ type: 'SUBMIT' });
+    machine.handle({ type: 'SUBMIT' });
 
     expect(machine.getActiveStateNodes().has('loggedOut')).toBe(true);
     expect(machine.getContext().loginAttempts).toBe(1);
@@ -159,8 +159,8 @@ describe('Guard Conditions Integration (Authentication)', () => {
   it('should transition to authenticating with valid credentials', () => {
     const machine = createAuthMachine();
 
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'secret' });
-    machine.send({ type: 'SUBMIT' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'secret' });
+    machine.handle({ type: 'SUBMIT' });
 
     expect(machine.getActiveStateNodes().has('authenticating')).toBe(true);
   });
@@ -168,9 +168,9 @@ describe('Guard Conditions Integration (Authentication)', () => {
   it('should complete successful login', () => {
     const machine = createAuthMachine();
 
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'secret' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'SUCCESS', token: 'abc123' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'secret' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'SUCCESS', token: 'abc123' });
 
     expect(machine.getActiveStateNodes().has('loggedIn')).toBe(true);
     expect(machine.getContext().sessionToken).toBe('abc123');
@@ -180,10 +180,10 @@ describe('Guard Conditions Integration (Authentication)', () => {
   it('should logout from loggedIn state', () => {
     const machine = createAuthMachine();
 
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'secret' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'SUCCESS', token: 'abc123' });
-    machine.send({ type: 'LOGOUT' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'secret' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'SUCCESS', token: 'abc123' });
+    machine.handle({ type: 'LOGOUT' });
 
     expect(machine.getActiveStateNodes().has('loggedOut')).toBe(true);
     expect(machine.getContext().sessionToken).toBeNull();
@@ -193,9 +193,9 @@ describe('Guard Conditions Integration (Authentication)', () => {
   it('should increment login attempts on failure', () => {
     const machine = createAuthMachine();
 
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'wrong' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'wrong' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
 
     expect(machine.getActiveStateNodes().has('loggedOut')).toBe(true);
     expect(machine.getContext().loginAttempts).toBe(1);
@@ -205,21 +205,21 @@ describe('Guard Conditions Integration (Authentication)', () => {
     const machine = createAuthMachine();
 
     // Attempt 1
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong1' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong1' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
     expect(machine.getContext().loginAttempts).toBe(1);
 
     // Attempt 2
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong2' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong2' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
     expect(machine.getContext().loginAttempts).toBe(2);
 
     // Attempt 3 - should lock
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong3' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong3' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
 
     expect(machine.getActiveStateNodes().has('locked')).toBe(true);
     expect(machine.getContext().isLocked).toBe(true);
@@ -230,21 +230,21 @@ describe('Guard Conditions Integration (Authentication)', () => {
     const machine = createAuthMachine();
 
     // Lock the account
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
 
     expect(machine.getActiveStateNodes().has('locked')).toBe(true);
 
     // Try to submit with correct credentials
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'correct' });
-    machine.send({ type: 'SUBMIT' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'correct' });
+    machine.handle({ type: 'SUBMIT' });
 
     // Should remain locked
     expect(machine.getActiveStateNodes().has('locked')).toBe(true);
@@ -254,18 +254,18 @@ describe('Guard Conditions Integration (Authentication)', () => {
     const machine = createAuthMachine();
 
     // Lock the account
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
 
     // Unlock
-    machine.send({ type: 'UNLOCK' });
+    machine.handle({ type: 'UNLOCK' });
 
     expect(machine.getActiveStateNodes().has('loggedOut')).toBe(true);
     expect(machine.getContext().isLocked).toBe(false);
@@ -277,21 +277,21 @@ describe('Guard Conditions Integration (Authentication)', () => {
     const machine = createAuthMachine();
 
     // Lock and unlock
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
-    machine.send({ type: 'UNLOCK' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'wrong' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
+    machine.handle({ type: 'UNLOCK' });
 
     // Now login successfully
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'correct' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'SUCCESS', token: 'xyz789' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'bob', password: 'correct' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'SUCCESS', token: 'xyz789' });
 
     expect(machine.getActiveStateNodes().has('loggedIn')).toBe(true);
     expect(machine.getContext().sessionToken).toBe('xyz789');
@@ -301,12 +301,12 @@ describe('Guard Conditions Integration (Authentication)', () => {
     const machine = createAuthMachine();
 
     // Has credentials but account is locked - AND should fail
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'test', password: 'pass' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'test', password: 'pass' });
 
     // Manually lock the account
     (machine as any).context.isLocked = true;
 
-    machine.send({ type: 'SUBMIT' });
+    machine.handle({ type: 'SUBMIT' });
 
     // Should go to locked, not authenticating
     expect(machine.getActiveStateNodes().has('locked')).toBe(true);
@@ -315,11 +315,11 @@ describe('Guard Conditions Integration (Authentication)', () => {
   it('should reject login without valid token', () => {
     const machine = createAuthMachine();
 
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'secret' });
-    machine.send({ type: 'SUBMIT' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'secret' });
+    machine.handle({ type: 'SUBMIT' });
 
     // Send success but without token (should fail guard)
-    machine.send({ type: 'SUCCESS', token: '' });
+    machine.handle({ type: 'SUCCESS', token: '' });
 
     // Should remain in authenticating
     expect(machine.getActiveStateNodes().has('authenticating')).toBe(true);
@@ -329,15 +329,15 @@ describe('Guard Conditions Integration (Authentication)', () => {
     const machine = createAuthMachine();
 
     // First attempt - fail
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'wrong' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'FAILURE' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'wrong' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'FAILURE' });
     expect(machine.getContext().loginAttempts).toBe(1);
 
     // Second attempt - success
-    machine.send({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'correct' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'SUCCESS', token: 'token123' });
+    machine.handle({ type: 'ENTER_CREDENTIALS', username: 'alice', password: 'correct' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'SUCCESS', token: 'token123' });
 
     expect(machine.getActiveStateNodes().has('loggedIn')).toBe(true);
     expect(machine.getContext().sessionToken).toBe('token123');

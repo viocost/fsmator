@@ -57,7 +57,7 @@ export function runContextChangesExample() {
         },
       },
     },
-    reducers: {
+    assigns: {
       logBrowsing: () => {
         console.log('    [App] User is browsing');
         return {};
@@ -128,19 +128,19 @@ export function runContextChangesExample() {
   const machine = new StateMachine(config);
 
   console.log('\n--- Adding items to cart ---');
-  machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
-  machine.send({ type: 'ADD_ITEM', item: { id: '2', name: 'Mouse', price: 29.99 } });
-  machine.send({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } }); // Add another laptop
+  machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } });
+  machine.handle({ type: 'ADD_ITEM', item: { id: '2', name: 'Mouse', price: 29.99 } });
+  machine.handle({ type: 'ADD_ITEM', item: { id: '1', name: 'Laptop', price: 999.99 } }); // Add another laptop
 
   console.log('\n--- Updating quantity ---');
-  machine.send({ type: 'UPDATE_QUANTITY', itemId: '2', quantity: 3 }); // 3 mice
+  machine.handle({ type: 'UPDATE_QUANTITY', itemId: '2', quantity: 3 }); // 3 mice
 
   console.log('\n--- Login and apply discount ---');
-  machine.send({ type: 'LOGIN', user: { name: 'John Doe', email: 'john@example.com' } });
-  machine.send({ type: 'APPLY_DISCOUNT', percent: 10 }); // 10% off
+  machine.handle({ type: 'LOGIN', user: { name: 'John Doe', email: 'john@example.com' } });
+  machine.handle({ type: 'APPLY_DISCOUNT', percent: 10 }); // 10% off
 
   console.log('\n--- Checkout ---');
-  machine.send({ type: 'CHECKOUT' });
+  machine.handle({ type: 'CHECKOUT' });
 
   console.log('\n--- Final State ---');
   console.log('Configuration:', Array.from(machine.getActiveStateNodes()));

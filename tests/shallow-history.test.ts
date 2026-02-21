@@ -40,19 +40,19 @@ describe('Shallow History', () => {
       expect(machine.getStateValue()).toEqual({ compound: 'a' });
 
       // Navigate to b
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ compound: 'b' });
 
       // Navigate to c
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ compound: 'c' });
 
       // Exit compound state
-      machine.send({ type: 'GO_TO_OTHER' });
+      machine.handle({ type: 'GO_TO_OTHER' });
       expect(machine.getStateValue()).toBe('other');
 
       // Return to compound - should go to initial state 'a', not 'c'
-      machine.send({ type: 'BACK' });
+      machine.handle({ type: 'BACK' });
       expect(machine.getStateValue()).toEqual({ compound: 'a' });
     });
 
@@ -87,19 +87,19 @@ describe('Shallow History', () => {
       expect(machine.getStateValue()).toEqual({ compound: 'a' });
 
       // Navigate to b
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ compound: 'b' });
 
       // Navigate to c
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ compound: 'c' });
 
       // Exit compound state
-      machine.send({ type: 'GO_TO_OTHER' });
+      machine.handle({ type: 'GO_TO_OTHER' });
       expect(machine.getStateValue()).toBe('other');
 
       // Return to compound - should go to last active state 'c'
-      machine.send({ type: 'BACK' });
+      machine.handle({ type: 'BACK' });
       expect(machine.getStateValue()).toEqual({ compound: 'c' });
     });
 
@@ -129,7 +129,7 @@ describe('Shallow History', () => {
       expect(machine.getStateValue()).toBe('other');
 
       // Enter compound for the first time - should use initial state
-      machine.send({ type: 'GO_TO_OTHER' });
+      machine.handle({ type: 'GO_TO_OTHER' });
       expect(machine.getStateValue()).toEqual({ compound: 'a' });
     });
   });
@@ -179,20 +179,20 @@ describe('Shallow History', () => {
       expect(machine.getStateValue()).toEqual({ outer: { inner: 'a' } });
 
       // Navigate to inner.b
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ outer: { inner: 'b' } });
 
       // Navigate to inner.c
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ outer: { inner: 'c' } });
 
       // Exit outer state
-      machine.send({ type: 'GO_TO_OTHER' });
+      machine.handle({ type: 'GO_TO_OTHER' });
       expect(machine.getStateValue()).toBe('other');
 
       // Return to outer - should restore to outer.inner (outer's history)
       // and inner.c (inner's history)
-      machine.send({ type: 'BACK' });
+      machine.handle({ type: 'BACK' });
       expect(machine.getStateValue()).toEqual({ outer: { inner: 'c' } });
     });
 
@@ -231,16 +231,16 @@ describe('Shallow History', () => {
       const machine = new StateMachine(config).start();
 
       // Navigate to inner.c
-      machine.send({ type: 'NEXT' });
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ outer: { inner: 'c' } });
 
       // Exit outer state
-      machine.send({ type: 'GO_TO_OTHER' });
+      machine.handle({ type: 'GO_TO_OTHER' });
       expect(machine.getStateValue()).toBe('other');
 
       // Return to outer - outer remembers 'inner', but inner doesn't remember 'c'
-      machine.send({ type: 'BACK' });
+      machine.handle({ type: 'BACK' });
       expect(machine.getStateValue()).toEqual({ outer: { inner: 'a' } });
     });
   });
@@ -274,21 +274,21 @@ describe('Shallow History', () => {
       const machine = new StateMachine(config).start();
 
       // Go to b and exit
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ compound: 'b' });
-      machine.send({ type: 'GO_TO_OTHER' });
+      machine.handle({ type: 'GO_TO_OTHER' });
 
       // Return - should be at b
-      machine.send({ type: 'BACK' });
+      machine.handle({ type: 'BACK' });
       expect(machine.getStateValue()).toEqual({ compound: 'b' });
 
       // Go to c and exit
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ compound: 'c' });
-      machine.send({ type: 'GO_TO_OTHER' });
+      machine.handle({ type: 'GO_TO_OTHER' });
 
       // Return - should be at c (updated history)
-      machine.send({ type: 'BACK' });
+      machine.handle({ type: 'BACK' });
       expect(machine.getStateValue()).toEqual({ compound: 'c' });
     });
   });
@@ -322,12 +322,12 @@ describe('Shallow History', () => {
       const machine1 = new StateMachine(config).start();
 
       // Navigate to c
-      machine1.send({ type: 'NEXT' });
-      machine1.send({ type: 'NEXT' });
+      machine1.handle({ type: 'NEXT' });
+      machine1.handle({ type: 'NEXT' });
       expect(machine1.getStateValue()).toEqual({ compound: 'c' });
 
       // Exit compound state
-      machine1.send({ type: 'GO_TO_OTHER' });
+      machine1.handle({ type: 'GO_TO_OTHER' });
       expect(machine1.getStateValue()).toBe('other');
 
       // Serialize the state (including history)
@@ -341,7 +341,7 @@ describe('Shallow History', () => {
       expect(machine2.getStateValue()).toBe('other');
 
       // Return to compound - should use history from snapshot
-      machine2.send({ type: 'BACK' });
+      machine2.handle({ type: 'BACK' });
       expect(machine2.getStateValue()).toEqual({ compound: 'c' });
     });
   });
@@ -371,11 +371,11 @@ describe('Shallow History', () => {
       const machine = new StateMachine(config).start();
 
       // First entry - should use initial
-      machine.send({ type: 'GO_TO_OTHER' });
+      machine.handle({ type: 'GO_TO_OTHER' });
       expect(machine.getStateValue()).toEqual({ compound: 'a' });
 
       // Navigate to b
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateValue()).toEqual({ compound: 'b' });
 
       // Self-transition on compound would exit and re-enter

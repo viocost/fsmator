@@ -1,4 +1,4 @@
-# State Reducer Examples
+# Fsmator Examples
 
 This folder contains comprehensive examples demonstrating various features of the fsmator library.
 
@@ -43,7 +43,7 @@ A simple traffic light state machine with no nesting.
 **Demonstrates:**
 
 - Basic state transitions
-- Simple reducers for context updates
+- Simple assigns for context updates
 - Flat state structure
 
 **States:** `red` → `yellow` → `green` → `red`
@@ -118,7 +118,7 @@ All examples run with `debug: true` enabled, showing detailed logs of:
 
 - State transitions
 - Guard evaluations
-- Reducer executions
+- Assign executions
 - Context changes
 - LCA computation (for nested transitions)
 
@@ -128,4 +128,4 @@ All examples run with `debug: true` enabled, showing detailed logs of:
 - **Synchronous Execution**: Events complete immediately
 - **Type Safety**: Full TypeScript support
 - **XState-Compatible**: Uses LCA algorithm for transitions
-- **No Side Effects**: Pure reducers only
+- **No Side Effects**: Pure assigns only

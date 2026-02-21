@@ -78,7 +78,7 @@ describe('Parallel Machine Integration (Media Player)', () => {
           },
         },
       },
-      reducers: {
+      assigns: {
         setPlaying: () => ({ isPlaying: true }),
         setPaused: () => ({ isPlaying: false }),
         setStopped: () => ({ isPlaying: false, currentTime: 0 }),
@@ -105,7 +105,7 @@ describe('Parallel Machine Integration (Media Player)', () => {
   it('should transition playback from stopped to playing', () => {
     const machine = createMediaMachine();
 
-    machine.send({ type: 'PLAY' });
+    machine.handle({ type: 'PLAY' });
 
     expect(machine.getActiveStateNodes().has('player.playback.playing')).toBe(true);
     expect(machine.getContext().isPlaying).toBe(true);
@@ -114,8 +114,8 @@ describe('Parallel Machine Integration (Media Player)', () => {
   it('should transition playback from playing to paused', () => {
     const machine = createMediaMachine();
 
-    machine.send({ type: 'PLAY' });
-    machine.send({ type: 'PAUSE' });
+    machine.handle({ type: 'PLAY' });
+    machine.handle({ type: 'PAUSE' });
 
     expect(machine.getActiveStateNodes().has('player.playback.paused')).toBe(true);
     expect(machine.getContext().isPlaying).toBe(false);
@@ -124,9 +124,9 @@ describe('Parallel Machine Integration (Media Player)', () => {
   it('should transition playback from paused to playing', () => {
     const machine = createMediaMachine();
 
-    machine.send({ type: 'PLAY' });
-    machine.send({ type: 'PAUSE' });
-    machine.send({ type: 'PLAY' });
+    machine.handle({ type: 'PLAY' });
+    machine.handle({ type: 'PAUSE' });
+    machine.handle({ type: 'PLAY' });
 
     expect(machine.getActiveStateNodes().has('player.playback.playing')).toBe(true);
     expect(machine.getContext().isPlaying).toBe(true);
@@ -135,8 +135,8 @@ describe('Parallel Machine Integration (Media Player)', () => {
   it('should stop playback and reset currentTime', () => {
     const machine = createMediaMachine();
 
-    machine.send({ type: 'PLAY' });
-    machine.send({ type: 'STOP' });
+    machine.handle({ type: 'PLAY' });
+    machine.handle({ type: 'STOP' });
 
     expect(machine.getActiveStateNodes().has('player.playback.stopped')).toBe(true);
     expect(machine.getContext().isPlaying).toBe(false);
@@ -148,10 +148,10 @@ describe('Parallel Machine Integration (Media Player)', () => {
 
     expect(machine.getContext().volume).toBe(50);
 
-    machine.send({ type: 'VOLUME_UP' });
+    machine.handle({ type: 'VOLUME_UP' });
     expect(machine.getContext().volume).toBe(60);
 
-    machine.send({ type: 'VOLUME_UP' });
+    machine.handle({ type: 'VOLUME_UP' });
     expect(machine.getContext().volume).toBe(70);
 
     // Volume state should remain normal
@@ -165,10 +165,10 @@ describe('Parallel Machine Integration (Media Player)', () => {
 
     expect(machine.getContext().volume).toBe(50);
 
-    machine.send({ type: 'VOLUME_DOWN' });
+    machine.handle({ type: 'VOLUME_DOWN' });
     expect(machine.getContext().volume).toBe(40);
 
-    machine.send({ type: 'VOLUME_DOWN' });
+    machine.handle({ type: 'VOLUME_DOWN' });
     expect(machine.getContext().volume).toBe(30);
   });
 
@@ -177,13 +177,13 @@ describe('Parallel Machine Integration (Media Player)', () => {
 
     // Max out volume
     for (let i = 0; i < 10; i++) {
-      machine.send({ type: 'VOLUME_UP' });
+      machine.handle({ type: 'VOLUME_UP' });
     }
 
     expect(machine.getContext().volume).toBe(100);
 
     // Try to go higher
-    machine.send({ type: 'VOLUME_UP' });
+    machine.handle({ type: 'VOLUME_UP' });
     expect(machine.getContext().volume).toBe(100);
   });
 
@@ -192,23 +192,23 @@ describe('Parallel Machine Integration (Media Player)', () => {
 
     // Min out volume
     for (let i = 0; i < 10; i++) {
-      machine.send({ type: 'VOLUME_DOWN' });
+      machine.handle({ type: 'VOLUME_DOWN' });
     }
 
     expect(machine.getContext().volume).toBe(0);
 
     // Try to go lower
-    machine.send({ type: 'VOLUME_DOWN' });
+    machine.handle({ type: 'VOLUME_DOWN' });
     expect(machine.getContext().volume).toBe(0);
   });
 
   it('should mute and unmute independently of playback', () => {
     const machine = createMediaMachine();
 
-    machine.send({ type: 'MUTE' });
+    machine.handle({ type: 'MUTE' });
     expect(machine.getActiveStateNodes().has('player.volume.muted')).toBe(true);
 
-    machine.send({ type: 'UNMUTE' });
+    machine.handle({ type: 'UNMUTE' });
     expect(machine.getActiveStateNodes().has('player.volume.normal')).toBe(true);
 
     // Playback state should remain stopped
@@ -219,21 +219,21 @@ describe('Parallel Machine Integration (Media Player)', () => {
     const machine = createMediaMachine();
 
     // Start playing
-    machine.send({ type: 'PLAY' });
+    machine.handle({ type: 'PLAY' });
     expect(machine.getActiveStateNodes().has('player.playback.playing')).toBe(true);
 
     // Increase volume while playing
-    machine.send({ type: 'VOLUME_UP' });
+    machine.handle({ type: 'VOLUME_UP' });
     expect(machine.getContext().volume).toBe(60);
     expect(machine.getActiveStateNodes().has('player.playback.playing')).toBe(true);
 
     // Mute while playing
-    machine.send({ type: 'MUTE' });
+    machine.handle({ type: 'MUTE' });
     expect(machine.getActiveStateNodes().has('player.volume.muted')).toBe(true);
     expect(machine.getActiveStateNodes().has('player.playback.playing')).toBe(true);
 
     // Pause while muted
-    machine.send({ type: 'PAUSE' });
+    machine.handle({ type: 'PAUSE' });
     expect(machine.getActiveStateNodes().has('player.playback.paused')).toBe(true);
     expect(machine.getActiveStateNodes().has('player.volume.muted')).toBe(true);
   });
@@ -241,33 +241,33 @@ describe('Parallel Machine Integration (Media Player)', () => {
   it('should maintain volume changes across playback state changes', () => {
     const machine = createMediaMachine();
 
-    machine.send({ type: 'VOLUME_UP' });
-    machine.send({ type: 'VOLUME_UP' });
+    machine.handle({ type: 'VOLUME_UP' });
+    machine.handle({ type: 'VOLUME_UP' });
     expect(machine.getContext().volume).toBe(70);
 
-    machine.send({ type: 'PLAY' });
+    machine.handle({ type: 'PLAY' });
     expect(machine.getContext().volume).toBe(70);
 
-    machine.send({ type: 'PAUSE' });
+    machine.handle({ type: 'PAUSE' });
     expect(machine.getContext().volume).toBe(70);
 
-    machine.send({ type: 'STOP' });
+    machine.handle({ type: 'STOP' });
     expect(machine.getContext().volume).toBe(70);
   });
 
   it('should maintain playback state across volume changes', () => {
     const machine = createMediaMachine();
 
-    machine.send({ type: 'PLAY' });
+    machine.handle({ type: 'PLAY' });
     expect(machine.getContext().isPlaying).toBe(true);
 
-    machine.send({ type: 'VOLUME_UP' });
+    machine.handle({ type: 'VOLUME_UP' });
     expect(machine.getContext().isPlaying).toBe(true);
 
-    machine.send({ type: 'MUTE' });
+    machine.handle({ type: 'MUTE' });
     expect(machine.getContext().isPlaying).toBe(true);
 
-    machine.send({ type: 'UNMUTE' });
+    machine.handle({ type: 'UNMUTE' });
     expect(machine.getContext().isPlaying).toBe(true);
   });
 });

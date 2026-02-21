@@ -28,7 +28,7 @@ describe('Parallel State Transition Shadowing', () => {
       const config: StateMachineConfig<TestContext, TestEvent> = {
         initial: 'parallel',
         initialContext: { logs: [] },
-        reducers: {
+        assigns: {
           childA: ({ context }) => ({ logs: [...context.logs, 'childA'] }),
           parent: ({ context }) => ({ logs: [...context.logs, 'parent'] }),
         },
@@ -55,7 +55,7 @@ describe('Parallel State Transition Shadowing', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'EVENT' });
+      machine.handle({ type: 'EVENT' });
 
       const logs = machine.getContext().logs;
       expect(logs).toEqual(['childA']);
@@ -68,7 +68,7 @@ describe('Parallel State Transition Shadowing', () => {
       const config: StateMachineConfig<TestContext, TestEvent> = {
         initial: 'parallel',
         initialContext: { logs: [] },
-        reducers: {
+        assigns: {
           childA: ({ context }) => ({ logs: [...context.logs, 'childA'] }),
           childB: ({ context }) => ({ logs: [...context.logs, 'childB'] }),
           parent: ({ context }) => ({ logs: [...context.logs, 'parent'] }),
@@ -100,7 +100,7 @@ describe('Parallel State Transition Shadowing', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'EVENT' });
+      machine.handle({ type: 'EVENT' });
 
       const logs = machine.getContext().logs;
       expect(logs).toEqual(['childA', 'childB']);
@@ -111,7 +111,7 @@ describe('Parallel State Transition Shadowing', () => {
       const config: StateMachineConfig<TestContext, TestEvent> = {
         initial: 'parallel',
         initialContext: { logs: [] },
-        reducers: {
+        assigns: {
           childA: ({ context }) => ({ logs: [...context.logs, 'childA'] }),
           childB: ({ context }) => ({ logs: [...context.logs, 'childB'] }),
           childC: ({ context }) => ({ logs: [...context.logs, 'childC'] }),
@@ -152,7 +152,7 @@ describe('Parallel State Transition Shadowing', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'EVENT' });
+      machine.handle({ type: 'EVENT' });
 
       const logs = machine.getContext().logs;
       expect(logs).toEqual(['childA', 'childB', 'childC']);
@@ -165,7 +165,7 @@ describe('Parallel State Transition Shadowing', () => {
       const config: StateMachineConfig<TestContext, TestEvent> = {
         initial: 'parallel',
         initialContext: { logs: [] },
-        reducers: {
+        assigns: {
           parent: ({ context }) => ({ logs: [...context.logs, 'parent'] }),
         },
         states: {
@@ -187,7 +187,7 @@ describe('Parallel State Transition Shadowing', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'EVENT' });
+      machine.handle({ type: 'EVENT' });
 
       const logs = machine.getContext().logs;
       expect(logs).toEqual(['parent']);
@@ -199,7 +199,7 @@ describe('Parallel State Transition Shadowing', () => {
       const config: StateMachineConfig<TestContext, TestEvent> = {
         initial: 'parallel',
         initialContext: { logs: [] },
-        reducers: {
+        assigns: {
           childA: ({ context }) => ({ logs: [...context.logs, 'childA'] }),
           parent: ({ context }) => ({ logs: [...context.logs, 'parent'] }),
         },
@@ -230,7 +230,7 @@ describe('Parallel State Transition Shadowing', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'EVENT' });
+      machine.handle({ type: 'EVENT' });
 
       const logs = machine.getContext().logs;
       expect(logs).toEqual(['childA']);
@@ -241,7 +241,7 @@ describe('Parallel State Transition Shadowing', () => {
       const config: StateMachineConfig<TestContext, TestEvent> = {
         initial: 'parallel',
         initialContext: { logs: [] },
-        reducers: {
+        assigns: {
           childA: ({ context }) => ({ logs: [...context.logs, 'childA'] }),
           parent: ({ context }) => ({ logs: [...context.logs, 'parent'] }),
         },
@@ -264,10 +264,10 @@ describe('Parallel State Transition Shadowing', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'EVENT' });
+      machine.handle({ type: 'EVENT' });
       expect(machine.getContext().logs).toEqual(['childA']);
 
-      machine.send({ type: 'OTHER' });
+      machine.handle({ type: 'OTHER' });
       expect(machine.getContext().logs).toEqual(['childA', 'parent']);
     });
   });
@@ -277,7 +277,7 @@ describe('Parallel State Transition Shadowing', () => {
       const config: StateMachineConfig<TestContext, TestEvent> = {
         initial: 'outerParallel',
         initialContext: { logs: [] },
-        reducers: {
+        assigns: {
           outerParent: ({ context }) => ({ logs: [...context.logs, 'outerParent'] }),
           innerParent: ({ context }) => ({ logs: [...context.logs, 'innerParent'] }),
           leaf: ({ context }) => ({ logs: [...context.logs, 'leaf'] }),
@@ -320,7 +320,7 @@ describe('Parallel State Transition Shadowing', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'EVENT' });
+      machine.handle({ type: 'EVENT' });
 
       const logs = machine.getContext().logs;
       // Leaf handles it, shadowing both inner and outer parents
@@ -333,7 +333,7 @@ describe('Parallel State Transition Shadowing', () => {
       const config: StateMachineConfig<TestContext, TestEvent> = {
         initial: 'outerParallel',
         initialContext: { logs: [] },
-        reducers: {
+        assigns: {
           innerParent: ({ context }) => ({ logs: [...context.logs, 'innerParent'] }),
           leaf: ({ context }) => ({ logs: [...context.logs, 'leaf'] }),
         },
@@ -374,7 +374,7 @@ describe('Parallel State Transition Shadowing', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'EVENT' });
+      machine.handle({ type: 'EVENT' });
 
       const logs = machine.getContext().logs;
       // Leaf handles it, shadows innerParent
@@ -392,7 +392,7 @@ describe('Parallel State Transition Shadowing', () => {
         guards: {
           alwaysFalse: () => false,
         },
-        reducers: {
+        assigns: {
           child: ({ context }) => ({ logs: [...context.logs, 'child'] }),
           parent: ({ context }) => ({ logs: [...context.logs, 'parent'] }),
         },
@@ -417,7 +417,7 @@ describe('Parallel State Transition Shadowing', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'EVENT' });
+      machine.handle({ type: 'EVENT' });
 
       // Child fires, parent's guarded transition would be shadowed anyway
       expect(machine.getContext().logs).toEqual(['child']);
@@ -430,7 +430,7 @@ describe('Parallel State Transition Shadowing', () => {
         guards: {
           alwaysFalse: () => false,
         },
-        reducers: {
+        assigns: {
           child: ({ context }) => ({ logs: [...context.logs, 'child'] }),
           parent: ({ context }) => ({ logs: [...context.logs, 'parent'] }),
         },
@@ -455,7 +455,7 @@ describe('Parallel State Transition Shadowing', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'EVENT' });
+      machine.handle({ type: 'EVENT' });
 
       // Child's guard fails, so parent fires
       expect(machine.getContext().logs).toEqual(['parent']);
@@ -465,7 +465,7 @@ describe('Parallel State Transition Shadowing', () => {
       const config: StateMachineConfig<TestContext, TestEvent> = {
         initial: 'parallel',
         initialContext: { logs: [] },
-        reducers: {
+        assigns: {
           regionA: ({ context }) => ({ logs: [...context.logs, 'regionA'] }),
           regionB: ({ context }) => ({ logs: [...context.logs, 'regionB'] }),
           parent: ({ context }) => ({ logs: [...context.logs, 'parent'] }),
@@ -489,7 +489,7 @@ describe('Parallel State Transition Shadowing', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'EVENT' });
+      machine.handle({ type: 'EVENT' });
 
       const logs = machine.getContext().logs;
       expect(logs).toEqual(['regionA', 'regionB']);

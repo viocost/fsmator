@@ -44,7 +44,7 @@ describe('Parallel State Transitions', () => {
     ]);
 
     // Transition to yellow
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     // Should be in yellow, not duplicate
     expect(machine.getStateValue()).toBe('yellow');
@@ -91,13 +91,13 @@ describe('Parallel State Transitions', () => {
     ]);
 
     // Transition to atomic
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     // Should only be in atomic, no leftover parallel regions
     expect(Array.from(machine.getActiveStateNodes())).toEqual(['atomic']);
 
     // Transition back to parallel
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     // Should be back in parallel with both regions
     expect(Array.from(machine.getActiveStateNodes()).sort()).toEqual([
@@ -157,7 +157,7 @@ describe('Parallel State Transitions', () => {
     ]);
 
     // Transition to done
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     // Should only be in done, all parallel regions and their children cleaned up
     expect(Array.from(machine.getActiveStateNodes())).toEqual(['done']);

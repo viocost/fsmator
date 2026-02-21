@@ -34,7 +34,7 @@ describe('Debug Logging', () => {
     };
 
     const machine = new StateMachine(config).start();
-    machine.send({ type: 'INC' });
+    machine.handle({ type: 'INC' });
 
     expect(consoleLogSpy).not.toHaveBeenCalled();
   });
@@ -55,7 +55,7 @@ describe('Debug Logging', () => {
     };
 
     const machine = new StateMachine(config).start();
-    machine.send({ type: 'INC' });
+    machine.handle({ type: 'INC' });
 
     expect(consoleLogSpy).not.toHaveBeenCalled();
   });
@@ -95,7 +95,7 @@ describe('Debug Logging', () => {
     const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear(); // Clear initialization logs
 
-    machine.send({ type: 'INC' });
+    machine.handle({ type: 'INC' });
 
     // Check for event and transition logs
     const logCalls = consoleLogSpy.mock.calls.map((call: any) => call[0]);
@@ -131,7 +131,7 @@ describe('Debug Logging', () => {
     const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
-    machine.send({ type: 'INC' });
+    machine.handle({ type: 'INC' });
 
     const logCalls = consoleLogSpy.mock.calls.map((call: any) => call[0]);
     expect(logCalls.some((log: string) => log.includes('Guard "isValid"'))).toBe(true);
@@ -162,7 +162,7 @@ describe('Debug Logging', () => {
     const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
-    machine.send({ type: 'INC' });
+    machine.handle({ type: 'INC' });
 
     const logCalls = consoleLogSpy.mock.calls.map((call: any) => call[0]);
     expect(logCalls.some((log: string) => log.includes('Guard "isValid"'))).toBe(true);
@@ -170,7 +170,7 @@ describe('Debug Logging', () => {
     expect(logCalls.some((log: string) => log.includes('No enabled transitions'))).toBe(true);
   });
 
-  it('should log reducer execution and context updates', () => {
+  it('should log assign execution and context updates', () => {
     const config: StateMachineConfig<{ count: number }, { type: 'INC' }> = {
       initial: 'idle',
       debug: true,
@@ -186,7 +186,7 @@ describe('Debug Logging', () => {
         },
         active: {},
       },
-      reducers: {
+      assigns: {
         increment: ({ context }) => ({ count: context.count + 1 }),
       },
     };
@@ -194,10 +194,10 @@ describe('Debug Logging', () => {
     const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
-    machine.send({ type: 'INC' });
+    machine.handle({ type: 'INC' });
 
     const logCalls = consoleLogSpy.mock.calls.map((call: any) => call[0]);
-    expect(logCalls.some((log: string) => log.includes('Executing reducer: increment'))).toBe(true);
+    expect(logCalls.some((log: string) => log.includes('Executing assign: increment'))).toBe(true);
     expect(logCalls.some((log: string) => log.includes('Context updates'))).toBe(true);
   });
 
@@ -217,7 +217,7 @@ describe('Debug Logging', () => {
           onEntry: ['logEntry'],
         },
       },
-      reducers: {
+      assigns: {
         logEntry: () => ({}),
         logExit: () => ({}),
       },
@@ -226,13 +226,13 @@ describe('Debug Logging', () => {
     const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
-    machine.send({ type: 'INC' });
+    machine.handle({ type: 'INC' });
 
     const logCalls = consoleLogSpy.mock.calls.map((call: any) => call[0]);
     expect(logCalls.some((log: string) => log.includes('Exiting state: idle'))).toBe(true);
-    expect(logCalls.some((log: string) => log.includes('Executing reducer: logExit'))).toBe(true);
+    expect(logCalls.some((log: string) => log.includes('Executing assign: logExit'))).toBe(true);
     expect(logCalls.some((log: string) => log.includes('Entering state: active'))).toBe(true);
-    expect(logCalls.some((log: string) => log.includes('Executing reducer: logEntry'))).toBe(true);
+    expect(logCalls.some((log: string) => log.includes('Executing assign: logEntry'))).toBe(true);
   });
 
   it('should log LCA, exit set, and entry set for nested transitions', () => {
@@ -263,7 +263,7 @@ describe('Debug Logging', () => {
     const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
-    machine.send({ type: 'GO' });
+    machine.handle({ type: 'GO' });
 
     const logCalls = consoleLogSpy.mock.calls.map((call: any) => call[0]);
     expect(logCalls.some((log: string) => log.includes('LCA:'))).toBe(true);
@@ -288,7 +288,7 @@ describe('Debug Logging', () => {
     const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
-    machine.send({ type: 'REFRESH' });
+    machine.handle({ type: 'REFRESH' });
 
     const logCalls = consoleLogSpy.mock.calls.map((call: any) => call[0]);
     expect(logCalls.some((log: string) => log.includes('Self-transition'))).toBe(true);
@@ -309,7 +309,7 @@ describe('Debug Logging', () => {
           },
         },
       },
-      reducers: {
+      assigns: {
         increment: ({ context }) => ({ count: context.count + 1 }),
       },
     };
@@ -317,7 +317,7 @@ describe('Debug Logging', () => {
     const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
-    machine.send({ type: 'INC' });
+    machine.handle({ type: 'INC' });
 
     const logCalls = consoleLogSpy.mock.calls.map((call: any) => call[0]);
     expect(logCalls.some((log: string) => log.includes('Internal transition'))).toBe(true);
@@ -352,7 +352,7 @@ describe('Debug Logging', () => {
     const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
-    machine.send({ type: 'GO' });
+    machine.handle({ type: 'GO' });
 
     const logCalls = consoleLogSpy.mock.calls.map((call: any) => call[0]);
     expect(logCalls.some((log: string) => log.includes('Evaluating AND guard'))).toBe(true);
@@ -378,7 +378,7 @@ describe('Debug Logging', () => {
     const machine = new StateMachine(config).start();
     consoleLogSpy.mockClear();
 
-    machine.send({ type: 'INC' });
+    machine.handle({ type: 'INC' });
 
     const logCalls = consoleLogSpy.mock.calls.map((call: any) => call[0]);
     expect(logCalls.some((log: string) => log.includes('New configuration'))).toBe(true);

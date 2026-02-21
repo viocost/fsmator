@@ -14,7 +14,7 @@ import { runEdgeCaseExample } from './parallel-machine.example';
 import { runParallelEdgeCaseExample } from './edge-parallel';
 
 console.log('╔' + '═'.repeat(78) + '╗');
-console.log('║' + ' '.repeat(20) + 'STATE REDUCER EXAMPLES' + ' '.repeat(35) + '║');
+console.log('║' + ' '.repeat(20) + 'STATE ASSIGNS EXAMPLES' + ' '.repeat(35) + '║');
 console.log('╚' + '═'.repeat(78) + '╝');
 
 // Run all examples

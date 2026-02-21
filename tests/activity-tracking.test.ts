@@ -44,16 +44,16 @@ describe('Activity Tracking', () => {
 
       expect(machine.getStateCounters()['a']).toBe(1);
 
-      machine.send({ type: 'TOGGLE' }); // a → b
+      machine.handle({ type: 'TOGGLE' }); // a → b
       expect(machine.getStateCounters()['b']).toBe(1);
 
-      machine.send({ type: 'TOGGLE' }); // b → a
+      machine.handle({ type: 'TOGGLE' }); // b → a
       expect(machine.getStateCounters()['a']).toBe(2);
 
-      machine.send({ type: 'TOGGLE' }); // a → b
+      machine.handle({ type: 'TOGGLE' }); // a → b
       expect(machine.getStateCounters()['b']).toBe(2);
 
-      machine.send({ type: 'TOGGLE' }); // b → a
+      machine.handle({ type: 'TOGGLE' }); // b → a
       expect(machine.getStateCounters()['a']).toBe(3);
     });
 
@@ -87,19 +87,19 @@ describe('Activity Tracking', () => {
       expect(machine.getStateCounters()['parent.child1']).toBe(1);
 
       // Transition child1 → child2
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateCounters()['parent']).toBe(1); // Parent not re-entered
       expect(machine.getStateCounters()['parent.child1']).toBe(1);
       expect(machine.getStateCounters()['parent.child2']).toBe(1);
 
       // Transition child2 → child1
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getStateCounters()['parent']).toBe(1);
       expect(machine.getStateCounters()['parent.child1']).toBe(2); // Re-entered
       expect(machine.getStateCounters()['parent.child2']).toBe(1);
 
       // Self-transition on parent (exits and re-enters entire hierarchy)
-      machine.send({ type: 'RESET' });
+      machine.handle({ type: 'RESET' });
       expect(machine.getStateCounters()['parent']).toBe(2); // Re-entered
       expect(machine.getStateCounters()['parent.child1']).toBe(3); // Re-entered again
     });
@@ -152,18 +152,18 @@ describe('Activity Tracking', () => {
       expect(machine.getStateCounters()['parallel.regionB.b1']).toBe(1);
 
       // Toggle region A only
-      machine.send({ type: 'TOGGLE_A' });
+      machine.handle({ type: 'TOGGLE_A' });
       expect(machine.getStateCounters()['parallel.regionA.a2']).toBe(1);
       expect(machine.getStateCounters()['parallel.regionB.b1']).toBe(1); // Unchanged
 
       // Toggle region B only
-      machine.send({ type: 'TOGGLE_B' });
+      machine.handle({ type: 'TOGGLE_B' });
       expect(machine.getStateCounters()['parallel.regionA.a2']).toBe(1); // Unchanged
       expect(machine.getStateCounters()['parallel.regionB.b2']).toBe(1);
 
       // Toggle both back
-      machine.send({ type: 'TOGGLE_A' });
-      machine.send({ type: 'TOGGLE_B' });
+      machine.handle({ type: 'TOGGLE_A' });
+      machine.handle({ type: 'TOGGLE_B' });
       expect(machine.getStateCounters()['parallel.regionA.a1']).toBe(2);
       expect(machine.getStateCounters()['parallel.regionB.b1']).toBe(2);
     });
@@ -241,7 +241,7 @@ describe('Activity Tracking', () => {
       ]);
 
       // Transition to B
-      machine.send({ type: 'TOGGLE' });
+      machine.handle({ type: 'TOGGLE' });
       activities = machine.getActiveActivities();
       expect(activities).toEqual([
         {
@@ -252,7 +252,7 @@ describe('Activity Tracking', () => {
       ]);
 
       // Transition back to A (instanceId = 2)
-      machine.send({ type: 'TOGGLE' });
+      machine.handle({ type: 'TOGGLE' });
       activities = machine.getActiveActivities();
       expect(activities).toEqual([
         {
@@ -389,8 +389,8 @@ describe('Activity Tracking', () => {
       };
 
       // Transition away and back
-      machine.send({ type: 'TOGGLE' }); // a → b
-      machine.send({ type: 'TOGGLE' }); // b → a (counter now 2)
+      machine.handle({ type: 'TOGGLE' }); // a → b
+      machine.handle({ type: 'TOGGLE' }); // b → a (counter now 2)
 
       // Old activity should no longer be relevant
       expect(machine.isActivityRelevant(oldActivity)).toBe(false);
@@ -429,7 +429,7 @@ describe('Activity Tracking', () => {
 
       expect(machine.isActivityRelevant(activityA)).toBe(true);
 
-      machine.send({ type: 'NEXT' }); // a → b
+      machine.handle({ type: 'NEXT' }); // a → b
 
       expect(machine.isActivityRelevant(activityA)).toBe(false);
     });
@@ -481,8 +481,8 @@ describe('Activity Tracking', () => {
         instanceId: 1,
       });
 
-      machine.send({ type: 'TOGGLE' }); // a → b
-      machine.send({ type: 'TOGGLE' }); // b → a (counter = 2)
+      machine.handle({ type: 'TOGGLE' }); // a → b
+      machine.handle({ type: 'TOGGLE' }); // b → a (counter = 2)
 
       const instance2 = machine.getActivityInstance({
         type: 'activityA',
@@ -540,8 +540,8 @@ describe('Activity Tracking', () => {
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'TOGGLE' }); // a → b
-      machine.send({ type: 'TOGGLE' }); // b → a
+      machine.handle({ type: 'TOGGLE' }); // a → b
+      machine.handle({ type: 'TOGGLE' }); // b → a
 
       const snapshot = machine.getSnapshot();
 
@@ -568,9 +568,9 @@ describe('Activity Tracking', () => {
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'TOGGLE' }); // a → b
-      machine1.send({ type: 'TOGGLE' }); // b → a
-      machine1.send({ type: 'TOGGLE' }); // a → b
+      machine1.handle({ type: 'TOGGLE' }); // a → b
+      machine1.handle({ type: 'TOGGLE' }); // b → a
+      machine1.handle({ type: 'TOGGLE' }); // a → b
 
       const snapshot = machine1.getSnapshot();
 
@@ -599,7 +599,7 @@ describe('Activity Tracking', () => {
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'TOGGLE' }); // a → b
+      machine1.handle({ type: 'TOGGLE' }); // a → b
 
       const snapshot = machine1.getSnapshot();
       const activities1 = machine1.getActiveActivities();
@@ -633,15 +633,15 @@ describe('Activity Tracking', () => {
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'TOGGLE' }); // a → b
-      machine1.send({ type: 'TOGGLE' }); // b → a (a counter = 2)
+      machine1.handle({ type: 'TOGGLE' }); // a → b
+      machine1.handle({ type: 'TOGGLE' }); // b → a (a counter = 2)
 
       const snapshot = machine1.getSnapshot();
 
       // Restore and continue
       const machine2 = new StateMachine(config).load(snapshot).start();
-      machine2.send({ type: 'TOGGLE' }); // a → b (b counter = 2)
-      machine2.send({ type: 'TOGGLE' }); // b → a (a counter = 3)
+      machine2.handle({ type: 'TOGGLE' }); // a → b (b counter = 2)
+      machine2.handle({ type: 'TOGGLE' }); // b → a (a counter = 3)
 
       expect(machine2.getStateCounters()['a']).toBe(3);
       expect(machine2.getStateCounters()['b']).toBe(2);

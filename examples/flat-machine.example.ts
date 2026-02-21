@@ -32,9 +32,8 @@ export function runFlatMachineExample() {
         },
         states: {
           dummyOne: {},
-          dummyTwo: {}
-
-        }
+          dummyTwo: {},
+        },
       },
       yellow: {
         on: {
@@ -48,7 +47,7 @@ export function runFlatMachineExample() {
         },
       },
     },
-    reducers: {
+    assigns: {
       incrementCycle: ({ context }) => ({ cycleCount: context.cycleCount + 1 }),
       resetCycle: () => ({ cycleCount: 0 }),
     },
@@ -56,53 +55,51 @@ export function runFlatMachineExample() {
 
   const machine = new StateMachine(config).start();
 
-  console.log('state ', machine.getStateValue())
-  console.log('state counters', machine.getStateCounters())
+  console.log('state ', machine.getStateValue());
+  console.log('state counters', machine.getStateCounters());
 
   console.log('Context:', machine.getContext());
   console.log('\n--- Cycling through lights ---');
-  machine.send({ type: 'NEXT' }); // red → yellow
+  machine.handle({ type: 'NEXT' }); // red → yellow
 
-  console.log('state ', machine.getStateValue())
-  console.log('state counters', machine.getStateCounters())
+  console.log('state ', machine.getStateValue());
+  console.log('state counters', machine.getStateCounters());
   console.log('Context:', machine.getContext());
-  machine.send({ type: 'NEXT' }); // yellow → green
+  machine.handle({ type: 'NEXT' }); // yellow → green
 
-  console.log('state ', machine.getStateValue())
-  console.log('state counters', machine.getStateCounters())
+  console.log('state ', machine.getStateValue());
+  console.log('state counters', machine.getStateCounters());
   console.log('Context:', machine.getContext());
 
-  machine.send({ type: 'NEXT' }); // green → red (increments cycle)
+  machine.handle({ type: 'NEXT' }); // green → red (increments cycle)
 
-  console.log('state counters', machine.getStateCounters())
+  console.log('state counters', machine.getStateCounters());
   console.log('\n--- Reset cycle ---');
-  machine.send({ type: 'NEXT' }); // red → yellow
+  machine.handle({ type: 'NEXT' }); // red → yellow
 
-  console.log('state ', machine.getStateValue())
-  console.log('state counters', machine.getStateCounters())
+  console.log('state ', machine.getStateValue());
+  console.log('state counters', machine.getStateCounters());
   console.log('Context:', machine.getContext());
-  machine.send({ type: 'NEXT' }); // yellow → green
+  machine.handle({ type: 'NEXT' }); // yellow → green
 
-
-  console.log('state ', machine.getStateValue())
-  console.log('state counters', machine.getStateCounters())
+  console.log('state ', machine.getStateValue());
+  console.log('state counters', machine.getStateCounters());
 
   console.log('Context:', machine.getContext());
 
-  machine.send({ type: 'RESET' }); // green → red (resets cycle)
+  machine.handle({ type: 'RESET' }); // green → red (resets cycle)
 
-  console.log('state ', machine.getStateValue())
-  console.log('state counters', machine.getStateCounters())
+  console.log('state ', machine.getStateValue());
+  console.log('state counters', machine.getStateCounters());
 
   console.log('Context:', machine.getContext());
 
   console.log('Configuration:', Array.from(machine.getActiveStateNodes()));
 
-  const snapshot = machine.getSnapshot()
+  const snapshot = machine.getSnapshot();
   const newMachine = new StateMachine(config).load(snapshot).start();
-  newMachine.send({ type: 'NEXT' });
-  console.log("State counters new machine:", newMachine.getStateCounters());
+  newMachine.handle({ type: 'NEXT' });
+  console.log('State counters new machine:', newMachine.getStateCounters());
 
   console.dir(config, { depth: null });
-
 }

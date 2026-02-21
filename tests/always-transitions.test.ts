@@ -46,7 +46,7 @@ describe('Always Transitions', () => {
 
       expect(machine.getActiveStateNodes().has('idle')).toBe(true);
 
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       // Should transition to processing, then immediately to done
       expect(machine.getActiveStateNodes().has('done')).toBe(true);
@@ -75,14 +75,14 @@ describe('Always Transitions', () => {
           },
           done: {},
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       // Should stay in waiting because guard fails (count < 3)
       expect(machine.getActiveStateNodes().has('waiting')).toBe(true);
@@ -112,7 +112,7 @@ describe('Always Transitions', () => {
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       // Should transition to done because guard passes (count >= 3)
       expect(machine.getActiveStateNodes().has('done')).toBe(true);
@@ -151,7 +151,7 @@ describe('Always Transitions', () => {
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       // Should transition to medium (first guard that passes)
       expect(machine.getActiveStateNodes().has('medium')).toBe(true);
@@ -184,7 +184,7 @@ describe('Always Transitions', () => {
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       // Should transition to unknown (fallback)
       expect(machine.getActiveStateNodes().has('unknown')).toBe(true);
@@ -196,7 +196,7 @@ describe('Always Transitions', () => {
       const config: StateMachineConfig<{ count: number }, { type: 'START' }> = {
         initial: 'idle',
         initialContext: { count: 0 },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
         states: {
@@ -214,7 +214,7 @@ describe('Always Transitions', () => {
 
       expect(machine.getContext().count).toBe(0);
 
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       expect(machine.getActiveStateNodes().has('done')).toBe(true);
       expect(machine.getContext().count).toBe(1);
@@ -227,7 +227,7 @@ describe('Always Transitions', () => {
         guards: {
           isDone: ({ context }) => context.count >= 3,
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
         states: {
@@ -246,7 +246,7 @@ describe('Always Transitions', () => {
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       // Should loop through incrementing until count >= 3
       expect(machine.getActiveStateNodes().has('done')).toBe(true);
@@ -261,7 +261,7 @@ describe('Always Transitions', () => {
       const config: StateMachineConfig<{ log: string[] }, { type: 'START' }> = {
         initial: 'idle',
         initialContext: { log: [] },
-        reducers: {
+        assigns: {
           logEntry: ({ context, state }) => ({
             log: [...context.log, `enter:${state}`],
           }),
@@ -286,7 +286,7 @@ describe('Always Transitions', () => {
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       const log = machine.getContext().log;
       expect(log).toContain('enter:intermediate');
@@ -395,7 +395,7 @@ describe('Always Transitions', () => {
         guards: {
           shouldIncrement: ({ context }) => context.count < 5,
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
         states: {
@@ -410,7 +410,7 @@ describe('Always Transitions', () => {
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       // Should stay in active but increment context once
       expect(machine.getActiveStateNodes().has('active')).toBe(true);
@@ -423,7 +423,7 @@ describe('Always Transitions', () => {
       const config: StateMachineConfig<{ step: number }, { type: 'START' }> = {
         initial: 'step1',
         initialContext: { step: 1 },
-        reducers: {
+        assigns: {
           incrementStep: ({ context }) => ({ step: context.step + 1 }),
         },
         states: {
@@ -451,7 +451,7 @@ describe('Always Transitions', () => {
       const config: StateMachineConfig<{ count: number }, { type: 'START' }> = {
         initial: 'looping',
         initialContext: { count: 0 },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
         states: {
@@ -483,7 +483,7 @@ describe('Always Transitions', () => {
       const machine = new StateMachine(config).start();
 
       // Sending NEXT should not trigger any transition
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
 
       expect(machine.getActiveStateNodes().has('idle')).toBe(true);
     });
@@ -528,7 +528,7 @@ describe('Always Transitions', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       // Should transition to done because guard passes
       expect(machine.getActiveStateNodes().has('done')).toBe(true);
@@ -538,7 +538,7 @@ describe('Always Transitions', () => {
       const config: StateMachineConfig<{ count: number }, { type: 'START' }> = {
         initial: 'idle',
         initialContext: { count: 0 },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
         states: {
@@ -555,7 +555,7 @@ describe('Always Transitions', () => {
       const machine = new StateMachine(config).start();
       expect(machine.getContext().count).toBe(0);
 
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       expect(machine.getActiveStateNodes().has('done')).toBe(true);
       expect(machine.getContext().count).toBe(1);
@@ -568,7 +568,7 @@ describe('Always Transitions', () => {
         guards: {
           canProcess: ({ context }) => context.count === 0,
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
         states: {
@@ -587,7 +587,7 @@ describe('Always Transitions', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       // Guard passes (count === 0), so transition and increment
       expect(machine.getActiveStateNodes().has('done')).toBe(true);
@@ -601,7 +601,7 @@ describe('Always Transitions', () => {
         guards: {
           shouldIncrement: ({ context }) => context.count < 5,
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
         states: {
@@ -615,7 +615,7 @@ describe('Always Transitions', () => {
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'START' });
+      machine.handle({ type: 'START' });
 
       // Should stay in active and increment once
       expect(machine.getActiveStateNodes().has('active')).toBe(true);

@@ -36,7 +36,7 @@ describe('StateMachine Initialization', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'idle',
-      reducers: {
+      assigns: {
         logEntry: ({ context }) => ({ log: [...context.log, 'entered-idle'] }),
         incrementCount: ({ context }) => ({ count: context.count + 1 }),
       },
@@ -58,7 +58,7 @@ describe('StateMachine Initialization', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'parent',
-      reducers: {
+      assigns: {
         logParent: ({ context }) => ({ log: [...context.log, 'parent'] }),
         logChild: ({ context }) => ({ log: [...context.log, 'child'] }),
       },
@@ -88,7 +88,7 @@ describe('StateMachine Initialization', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'parallel',
-      reducers: {
+      assigns: {
         logParallel: ({ context }) => ({ log: [...context.log, 'parallel'] }),
         logRegion1: ({ context }) => ({ log: [...context.log, 'region1'] }),
         logRegion2: ({ context }) => ({ log: [...context.log, 'region2'] }),
@@ -127,7 +127,7 @@ describe('StateMachine Initialization', () => {
   });
 });
 
-describe('StateMachine.send() - Simple Transitions', () => {
+describe('StateMachine.handle() - Simple Transitions', () => {
   it('should transition between sibling states', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
@@ -145,7 +145,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     const machine = new StateMachine(config).start();
     expect(machine.getActiveStateNodes().has('idle')).toBe(true);
 
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     const config2 = machine.getActiveStateNodes();
     expect(config2.has('idle')).toBe(false);
@@ -156,7 +156,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'idle',
-      reducers: {
+      assigns: {
         logIdleExit: ({ context }) => ({ log: [...context.log, 'exit-idle'] }),
         logActiveEntry: ({ context }) => ({ log: [...context.log, 'enter-active'] }),
       },
@@ -174,7 +174,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     };
 
     const machine = new StateMachine(config).start();
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     const context = machine.getContext();
     expect(context.log).toEqual(['exit-idle', 'enter-active']);
@@ -184,7 +184,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'idle',
-      reducers: {
+      assigns: {
         incrementCount: ({ context }) => ({ count: context.count + 1 }),
       },
       states: {
@@ -198,7 +198,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     };
 
     const machine = new StateMachine(config).start();
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     const context = machine.getContext();
     expect(context.count).toBe(1);
@@ -222,7 +222,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     };
 
     const machine = new StateMachine(config).start();
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     expect(machine.getActiveStateNodes().has('active')).toBe(true);
   });
@@ -245,7 +245,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     };
 
     const machine = new StateMachine(config).start();
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     // Should remain in idle because guard failed
     expect(machine.getActiveStateNodes().has('idle')).toBe(true);
@@ -256,7 +256,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'idle',
-      reducers: {
+      assigns: {
         incrementCount: ({ context }) => ({ count: context.count + 1 }),
       },
       states: {
@@ -269,7 +269,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     };
 
     const machine = new StateMachine(config).start();
-    machine.send({ type: 'INCREMENT' });
+    machine.handle({ type: 'INCREMENT' });
 
     // Should remain in idle
     expect(machine.getActiveStateNodes().has('idle')).toBe(true);
@@ -281,7 +281,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'idle',
-      reducers: {
+      assigns: {
         logEntry: ({ context }) => ({ log: [...context.log, 'entry'] }),
         logExit: ({ context }) => ({ log: [...context.log, 'exit'] }),
       },
@@ -300,7 +300,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     const initialLog = machine.getContext().log;
     expect(initialLog).toEqual(['entry']);
 
-    machine.send({ type: 'RESET' });
+    machine.handle({ type: 'RESET' });
 
     const context = machine.getContext();
     expect(context.log).toEqual(['entry', 'exit', 'entry']);
@@ -319,7 +319,7 @@ describe('StateMachine.send() - Simple Transitions', () => {
     const configBefore = new Set(machine.getActiveStateNodes());
     const contextBefore = machine.getContext();
 
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     expect(machine.getActiveStateNodes()).toEqual(configBefore);
     expect(machine.getContext()).toBe(contextBefore);
@@ -331,7 +331,7 @@ describe('LCA-based Transitions', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'a',
-      reducers: {
+      assigns: {
         logBExit: ({ context }) => ({ log: [...context.log, 'exit-b'] }),
         logCEntry: ({ context }) => ({ log: [...context.log, 'enter-c'] }),
       },
@@ -356,7 +356,7 @@ describe('LCA-based Transitions', () => {
     const machine = new StateMachine(config).start();
     expect(machine.getActiveStateNodes().has('a.b')).toBe(true);
 
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     const configuration = machine.getActiveStateNodes();
     expect(configuration.has('a.b')).toBe(false);
@@ -371,7 +371,7 @@ describe('LCA-based Transitions', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'a',
-      reducers: {
+      assigns: {
         logCExit: ({ context }) => ({ log: [...context.log, 'exit-c'] }),
         logBExit: ({ context }) => ({ log: [...context.log, 'exit-b'] }),
         logDEntry: ({ context }) => ({ log: [...context.log, 'enter-d'] }),
@@ -410,7 +410,7 @@ describe('LCA-based Transitions', () => {
     const machine = new StateMachine(config).start();
     expect(machine.getActiveStateNodes().has('a.b.c')).toBe(true);
 
-    machine.send({ type: 'GO_TO_C' });
+    machine.handle({ type: 'GO_TO_C' });
 
     const configuration = machine.getActiveStateNodes();
     expect(configuration.has('a.b')).toBe(false);
@@ -428,7 +428,7 @@ describe('LCA-based Transitions', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'parent',
-      reducers: {
+      assigns: {
         logParentExit: ({ context }) => ({ log: [...context.log, 'exit-parent'] }),
         logChildExit: ({ context }) => ({ log: [...context.log, 'exit-child'] }),
         logOtherEntry: ({ context }) => ({ log: [...context.log, 'enter-other'] }),
@@ -453,7 +453,7 @@ describe('LCA-based Transitions', () => {
     };
 
     const machine = new StateMachine(config).start();
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     const configuration = machine.getActiveStateNodes();
     expect(configuration.has('parent')).toBe(false);
@@ -468,7 +468,7 @@ describe('LCA-based Transitions', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'idle',
-      reducers: {
+      assigns: {
         logParentEntry: ({ context }) => ({ log: [...context.log, 'enter-parent'] }),
         logChildEntry: ({ context }) => ({ log: [...context.log, 'enter-child'] }),
       },
@@ -491,7 +491,7 @@ describe('LCA-based Transitions', () => {
     };
 
     const machine = new StateMachine(config).start();
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     const configuration = machine.getActiveStateNodes();
     expect(configuration.has('idle')).toBe(false);
@@ -508,7 +508,7 @@ describe('Context Immutability', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'idle',
-      reducers: {
+      assigns: {
         incrementCount: ({ context }) => ({ count: context.count + 1 }),
       },
       states: {
@@ -524,7 +524,7 @@ describe('Context Immutability', () => {
     const contextBefore = machine.getContext();
     const countBefore = contextBefore.count;
 
-    machine.send({ type: 'INCREMENT' });
+    machine.handle({ type: 'INCREMENT' });
 
     // Original context reference should have same value
     expect(contextBefore.count).toBe(countBefore);
@@ -536,7 +536,7 @@ describe('Context Immutability', () => {
     const config: StateMachineConfig<TestContext, TestEvents> = {
       initialContext: { log: [], count: 0 },
       initial: 'idle',
-      reducers: {
+      assigns: {
         addLog1: ({ context }) => ({ log: [...context.log, '1'] }),
         addLog2: ({ context }) => ({ log: [...context.log, '2'] }),
         addLog3: ({ context }) => ({ log: [...context.log, '3'] }),
@@ -555,7 +555,7 @@ describe('Context Immutability', () => {
     };
 
     const machine = new StateMachine(config).start();
-    machine.send({ type: 'NEXT' });
+    machine.handle({ type: 'NEXT' });
 
     const context = machine.getContext();
     expect(context.log).toEqual(['1', '2', '3']);

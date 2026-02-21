@@ -81,7 +81,7 @@ export function runNestedMachineExample() {
         },
       },
     },
-    reducers: {
+    assigns: {
       logIdle: () => {
         console.log('    [App] Entered idle state');
         return {};
@@ -131,16 +131,16 @@ export function runNestedMachineExample() {
   const machine = new StateMachine(config);
 
   console.log('\n--- Successful submission flow ---');
-  machine.send({ type: 'EDIT' });
-  machine.send({ type: 'SUBMIT' });
-  machine.send({ type: 'VALIDATE_SUCCESS' });
-  machine.send({ type: 'API_SUCCESS' });
+  machine.handle({ type: 'EDIT' });
+  machine.handle({ type: 'SUBMIT' });
+  machine.handle({ type: 'VALIDATE_SUCCESS' });
+  machine.handle({ type: 'API_SUCCESS' });
 
   console.log('\n--- Failed validation flow ---');
-  machine.send({ type: 'RESET' });
-  machine.send({ type: 'EDIT' });
-  machine.send({ type: 'SUBMIT' });
-  machine.send({ type: 'VALIDATE_FAIL', errors: ['Invalid email'] });
+  machine.handle({ type: 'RESET' });
+  machine.handle({ type: 'EDIT' });
+  machine.handle({ type: 'SUBMIT' });
+  machine.handle({ type: 'VALIDATE_FAIL', errors: ['Invalid email'] });
 
   console.log('\n--- Final State ---');
   console.log('Configuration:', Array.from(machine.getActiveStateNodes()));

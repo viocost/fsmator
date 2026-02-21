@@ -74,7 +74,7 @@ const config: StateMachineConfig<FormContext, FormEvent> = {
       return context.data.length > 0;
     },
   },
-  reducers: {
+  assigns: {
     logEditEntry: () => {
       console.log('    [USER CODE] Entered editing state');
       return {};
@@ -117,13 +117,13 @@ console.log('Scenario: Successful form submission');
 console.log('='.repeat(80));
 
 // Simulate a form flow
-machine.send({ type: 'EDIT' });
-machine.send({ type: 'SUBMIT' }); // Will fail guard - no data yet
+machine.handle({ type: 'EDIT' });
+machine.handle({ type: 'SUBMIT' }); // Will fail guard - no data yet
 
 // Add data and try again
 (machine as any).context.data = 'test data';
-machine.send({ type: 'SUBMIT' }); // Should succeed
-machine.send({ type: 'SUCCESS' });
+machine.handle({ type: 'SUBMIT' }); // Should succeed
+machine.handle({ type: 'SUCCESS' });
 
 console.log('\n' + '='.repeat(80));
 console.log('Scenario: Failed submission with retry');
@@ -135,11 +135,11 @@ const machine2 = new StateMachine({
   initialContext: { ...config.initialContext, data: 'test' },
 });
 
-machine2.send({ type: 'EDIT' });
-machine2.send({ type: 'SUBMIT' });
-machine2.send({ type: 'ERROR', message: 'Network error' });
-machine2.send({ type: 'RETRY' });
-machine2.send({ type: 'SUCCESS' });
+machine2.handle({ type: 'EDIT' });
+machine2.handle({ type: 'SUBMIT' });
+machine2.handle({ type: 'ERROR', message: 'Network error' });
+machine2.handle({ type: 'RETRY' });
+machine2.handle({ type: 'SUCCESS' });
 
 console.log('\n' + '='.repeat(80));
 console.log('Final Contexts:');

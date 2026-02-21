@@ -73,7 +73,7 @@ describe('Time Travel', () => {
             on: { INC: { assign: 'increment' } },
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
@@ -81,10 +81,10 @@ describe('Time Travel', () => {
       const machine = new StateMachine(config).start();
       // History: [0]
 
-      machine.send({ type: 'INC' }); // count = 1
+      machine.handle({ type: 'INC' }); // count = 1
       // History: [0, 1]
 
-      machine.send({ type: 'INC' }); // count = 2
+      machine.handle({ type: 'INC' }); // count = 2
       // History: [0, 1, 2]
 
       expect(machine.getContext().count).toBe(2);
@@ -109,17 +109,17 @@ describe('Time Travel', () => {
             on: { INC: { assign: 'increment' } },
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'INC' }); // count = 1
-      machine.send({ type: 'INC' }); // count = 2
-      machine.send({ type: 'INC' }); // count = 3
-      machine.send({ type: 'INC' }); // count = 4
+      machine.handle({ type: 'INC' }); // count = 1
+      machine.handle({ type: 'INC' }); // count = 2
+      machine.handle({ type: 'INC' }); // count = 3
+      machine.handle({ type: 'INC' }); // count = 4
 
       expect(machine.getContext().count).toBe(4);
 
@@ -141,16 +141,16 @@ describe('Time Travel', () => {
             on: { INC: { assign: 'increment' } },
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'INC' });
-      machine.send({ type: 'INC' });
-      machine.send({ type: 'INC' });
+      machine.handle({ type: 'INC' });
+      machine.handle({ type: 'INC' });
+      machine.handle({ type: 'INC' });
 
       machine.rewind(100); // Rewind more than history length
       expect(machine.getContext().count).toBe(0);
@@ -171,13 +171,13 @@ describe('Time Travel', () => {
             on: { INC: { assign: 'increment' } },
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'INC' });
+      machine.handle({ type: 'INC' });
 
       machine.rewind(100);
       expect(machine.getHistoryIndex()).toBe(0);
@@ -202,15 +202,15 @@ describe('Time Travel', () => {
             on: { INC: { assign: 'increment' } },
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'INC' }); // count = 1
-      machine.send({ type: 'INC' }); // count = 2
+      machine.handle({ type: 'INC' }); // count = 1
+      machine.handle({ type: 'INC' }); // count = 2
 
       machine.rewind(2); // Back to count = 0
       expect(machine.getContext().count).toBe(0);
@@ -233,17 +233,17 @@ describe('Time Travel', () => {
             on: { INC: { assign: 'increment' } },
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'INC' });
-      machine.send({ type: 'INC' });
-      machine.send({ type: 'INC' });
-      machine.send({ type: 'INC' }); // count = 4
+      machine.handle({ type: 'INC' });
+      machine.handle({ type: 'INC' });
+      machine.handle({ type: 'INC' });
+      machine.handle({ type: 'INC' }); // count = 4
 
       machine.rewind(4); // Back to 0
       expect(machine.getContext().count).toBe(0);
@@ -266,15 +266,15 @@ describe('Time Travel', () => {
             on: { INC: { assign: 'increment' } },
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'INC' });
-      machine.send({ type: 'INC' }); // count = 2, index = 2
+      machine.handle({ type: 'INC' });
+      machine.handle({ type: 'INC' }); // count = 2, index = 2
 
       machine.rewind(1); // index = 1
 
@@ -307,10 +307,10 @@ describe('Time Travel', () => {
       const machine = new StateMachine(config).start();
       expect(machine.getActiveStateNodes()).toEqual(new Set(['a']));
 
-      machine.send({ type: 'NEXT' }); // a -> b
+      machine.handle({ type: 'NEXT' }); // a -> b
       expect(machine.getActiveStateNodes()).toEqual(new Set(['b']));
 
-      machine.send({ type: 'NEXT' }); // b -> c
+      machine.handle({ type: 'NEXT' }); // b -> c
       expect(machine.getActiveStateNodes()).toEqual(new Set(['c']));
 
       machine.rewind(2); // Back to a
@@ -342,7 +342,7 @@ describe('Time Travel', () => {
       const machine = new StateMachine(config).start();
       expect(machine.getActiveStateNodes()).toEqual(new Set(['parent', 'parent.child1']));
 
-      machine.send({ type: 'NEXT' });
+      machine.handle({ type: 'NEXT' });
       expect(machine.getActiveStateNodes()).toEqual(new Set(['parent', 'parent.child2']));
 
       machine.rewind();
@@ -377,17 +377,17 @@ describe('Time Travel', () => {
       expect(machine.getStateCounters()['a']).toBe(1);
       expect(machine.getStateCounters()['b']).toBeUndefined();
 
-      machine.send({ type: 'TOGGLE' }); // a -> b
+      machine.handle({ type: 'TOGGLE' }); // a -> b
       // Now: a=1, b=1
       expect(machine.getStateCounters()['a']).toBe(1);
       expect(machine.getStateCounters()['b']).toBe(1);
 
-      machine.send({ type: 'TOGGLE' }); // b -> a
+      machine.handle({ type: 'TOGGLE' }); // b -> a
       // Now: a=2, b=1
       expect(machine.getStateCounters()['a']).toBe(2);
       expect(machine.getStateCounters()['b']).toBe(1);
 
-      machine.send({ type: 'TOGGLE' }); // a -> b
+      machine.handle({ type: 'TOGGLE' }); // a -> b
       // Now: a=2, b=2
       expect(machine.getStateCounters()['a']).toBe(2);
       expect(machine.getStateCounters()['b']).toBe(2);
@@ -405,7 +405,7 @@ describe('Time Travel', () => {
   });
 
   describe('History Branching', () => {
-    it('should create new branch when sending after rewind', () => {
+    it('should create new branch when handling after rewind', () => {
       type Context = { value: string };
       type Event = { type: 'A' } | { type: 'B' } | { type: 'C' };
 
@@ -422,7 +422,7 @@ describe('Time Travel', () => {
             },
           },
         },
-        reducers: {
+        assigns: {
           setA: () => ({ value: 'A' }),
           setB: () => ({ value: 'B' }),
           setC: () => ({ value: 'C' }),
@@ -432,10 +432,10 @@ describe('Time Travel', () => {
       const machine = new StateMachine(config).start();
       // History: ['start']
 
-      machine.send({ type: 'A' });
+      machine.handle({ type: 'A' });
       // History: ['start', 'A']
 
-      machine.send({ type: 'B' });
+      machine.handle({ type: 'B' });
       // History: ['start', 'A', 'B']
 
       expect(machine.getHistoryLength()).toBe(3);
@@ -448,7 +448,7 @@ describe('Time Travel', () => {
       expect(machine.getHistoryLength()).toBe(3); // History still has 3 items
 
       // Send a new event - this should branch history
-      machine.send({ type: 'C' });
+      machine.handle({ type: 'C' });
       // History should now be: ['start', 'A', 'C'] (B was removed)
 
       expect(machine.getContext().value).toBe('C');
@@ -476,16 +476,16 @@ describe('Time Travel', () => {
             },
           },
         },
-        reducers: {
+        assigns: {
           addToPath: ({ context, event }) => ({ path: [...context.path, event.value] }),
         },
       };
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'ADD', value: 'A' });
-      machine.send({ type: 'ADD', value: 'B' });
-      machine.send({ type: 'ADD', value: 'C' });
+      machine.handle({ type: 'ADD', value: 'A' });
+      machine.handle({ type: 'ADD', value: 'B' });
+      machine.handle({ type: 'ADD', value: 'C' });
       // Path: [] -> [A] -> [A,B] -> [A,B,C]
 
       expect(machine.getContext().path).toEqual(['A', 'B', 'C']);
@@ -495,7 +495,7 @@ describe('Time Travel', () => {
       expect(machine.getContext().path).toEqual(['A']);
 
       // Branch with X
-      machine.send({ type: 'ADD', value: 'X' });
+      machine.handle({ type: 'ADD', value: 'X' });
       expect(machine.getContext().path).toEqual(['A', 'X']);
       expect(machine.getHistoryLength()).toBe(3); // [], [A], [A,X]
 
@@ -517,7 +517,7 @@ describe('Time Travel', () => {
             on: { INC: { assign: 'increment' } },
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
@@ -526,7 +526,7 @@ describe('Time Travel', () => {
 
       // Build history: 0, 1, 2, 3, 4
       for (let i = 0; i < 4; i++) {
-        machine.send({ type: 'INC' });
+        machine.handle({ type: 'INC' });
       }
 
       expect(machine.getHistoryLength()).toBe(5); // 0,1,2,3,4
@@ -537,7 +537,7 @@ describe('Time Travel', () => {
       expect(machine.getHistoryLength()).toBe(5); // Still has future
 
       // Send event to branch
-      machine.send({ type: 'INC' }); // count becomes 2 again
+      machine.handle({ type: 'INC' }); // count becomes 2 again
       expect(machine.getHistoryLength()).toBe(3); // 0,1,2 (3,4 removed)
       expect(machine.getContext().count).toBe(2);
 
@@ -571,17 +571,17 @@ describe('Time Travel', () => {
             },
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'INC' }); // count = 1, state = a
-      machine.send({ type: 'NEXT' }); // count = 1, state = b
-      machine.send({ type: 'INC' }); // count = 2, state = b
-      machine.send({ type: 'INC' }); // count = 3, state = b
+      machine.handle({ type: 'INC' }); // count = 1, state = a
+      machine.handle({ type: 'NEXT' }); // count = 1, state = b
+      machine.handle({ type: 'INC' }); // count = 2, state = b
+      machine.handle({ type: 'INC' }); // count = 3, state = b
 
       expect(machine.getContext().count).toBe(3);
       expect(machine.getActiveStateNodes()).toEqual(new Set(['b']));
@@ -628,17 +628,17 @@ describe('Time Travel', () => {
           isHigh: ({ context }) => context.value > 75,
           isLow: ({ context }) => context.value < 25,
         },
-        reducers: {
+        assigns: {
           setValue: ({ event }) => ({ value: event.value }),
         },
       };
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'SET', value: 10 }); // -> checking -> low
+      machine.handle({ type: 'SET', value: 10 }); // -> checking -> low
       expect(machine.getActiveStateNodes()).toEqual(new Set(['low']));
 
-      machine.send({ type: 'SET', value: 90 }); // -> checking -> high
+      machine.handle({ type: 'SET', value: 90 }); // -> checking -> high
       expect(machine.getActiveStateNodes()).toEqual(new Set(['high']));
 
       machine.rewind(); // Back to low
@@ -672,7 +672,7 @@ describe('Time Travel', () => {
 
       expect(machine.isHalted()).toBe(false);
 
-      machine.send({ type: 'FINISH' });
+      machine.handle({ type: 'FINISH' });
       expect(machine.isHalted()).toBe(true);
       expect(machine.getActiveStateNodes()).toEqual(new Set(['done']));
 
@@ -729,8 +729,8 @@ describe('Time Travel', () => {
         ])
       );
 
-      machine.send({ type: 'TOGGLE_A' }); // a1 -> a2
-      machine.send({ type: 'TOGGLE_B' }); // b1 -> b2
+      machine.handle({ type: 'TOGGLE_A' }); // a1 -> a2
+      machine.handle({ type: 'TOGGLE_B' }); // b1 -> b2
 
       expect(machine.getActiveStateNodes()).toEqual(
         new Set([
@@ -794,13 +794,13 @@ describe('Time Travel', () => {
             on: { INC: { assign: 'increment' } },
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
 
       const machine = new StateMachine(config).start();
-      machine.send({ type: 'INC' });
+      machine.handle({ type: 'INC' });
 
       const endIndex = machine.getHistoryIndex();
 
@@ -821,7 +821,7 @@ describe('Time Travel', () => {
             on: { INC: { assign: 'increment' } },
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
@@ -829,7 +829,7 @@ describe('Time Travel', () => {
       const machine = new StateMachine(config).start();
 
       for (let i = 0; i < 5; i++) {
-        machine.send({ type: 'INC' });
+        machine.handle({ type: 'INC' });
       }
 
       expect(machine.getContext().count).toBe(5);

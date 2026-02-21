@@ -1,15 +1,13 @@
-import js from '@eslint/js';
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsparser from '@typescript-eslint/parser';
+const tseslint = require('@typescript-eslint/eslint-plugin');
+const tsparser = require('@typescript-eslint/parser');
 
-export default [
-  js.configs.recommended,
+module.exports = [
   {
     files: ['**/*.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
-        project: './tsconfig.json',
+        project: './tsconfig.eslint.json',
       },
     },
     plugins: {
@@ -24,6 +22,6 @@ export default [
     },
   },
   {
-    ignores: ['dist', 'node_modules', '*.config.ts', '*.config.js'],
+    ignores: ['dist', 'node_modules', '*.config.ts', '*.config.js', '*.config.cjs'],
   },
 ];

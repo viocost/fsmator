@@ -20,15 +20,15 @@ describe('Snapshot Dump and Load', () => {
             },
           },
         },
-        reducers: {
+        assigns: {
           incrementCount: ({ context }) => ({ count: context.count + 1 }),
         },
       };
 
       // Create and start machine
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'INCREMENT' });
-      machine1.send({ type: 'INCREMENT' });
+      machine1.handle({ type: 'INCREMENT' });
+      machine1.handle({ type: 'INCREMENT' });
 
       // Dump state
       const json = machine1.dump();
@@ -82,7 +82,7 @@ describe('Snapshot Dump and Load', () => {
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'GO' });
+      machine1.handle({ type: 'GO' });
 
       const json = machine1.dump();
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
@@ -108,9 +108,9 @@ describe('Snapshot Dump and Load', () => {
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'TOGGLE' }); // off -> on (on:1)
-      machine1.send({ type: 'TOGGLE' }); // on -> off (off:2)
-      machine1.send({ type: 'TOGGLE' }); // off -> on (on:2)
+      machine1.handle({ type: 'TOGGLE' }); // off -> on (on:1)
+      machine1.handle({ type: 'TOGGLE' }); // on -> off (off:2)
+      machine1.handle({ type: 'TOGGLE' }); // off -> on (on:2)
 
       const json = machine1.dump();
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
@@ -124,7 +124,7 @@ describe('Snapshot Dump and Load', () => {
       expect(counters2['on']).toBe(2);
     });
 
-    it('should allow sending events after load', () => {
+    it('should allow handling events after load', () => {
       type Context = { value: number };
       type Event = { type: 'ADD'; amount: number };
 
@@ -140,19 +140,19 @@ describe('Snapshot Dump and Load', () => {
             },
           },
         },
-        reducers: {
+        assigns: {
           addValue: ({ context, event }) => ({ value: context.value + event.amount }),
         },
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'ADD', amount: 5 });
+      machine1.handle({ type: 'ADD', amount: 5 });
 
       const json = machine1.dump();
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
 
       // Send event after load
-      machine2.send({ type: 'ADD', amount: 3 });
+      machine2.handle({ type: 'ADD', amount: 3 });
 
       expect(machine2.getContext().value).toBe(18); // 10 + 5 + 3
     });
@@ -172,9 +172,9 @@ describe('Snapshot Dump and Load', () => {
       };
 
       const invalidSnapshot: MachineSnapshot<Context> = {
-        initialContext: {},
+        context: {},
         configuration: ['invalid_state'],
-        stateEntryCounters: {},
+        stateCounters: {},
       };
 
       const machine = new StateMachine(config);
@@ -195,9 +195,9 @@ describe('Snapshot Dump and Load', () => {
       };
 
       const invalidSnapshot: MachineSnapshot<Context> = {
-        initialContext: {},
+        context: {},
         configuration: [],
-        stateEntryCounters: {},
+        stateCounters: {},
       };
 
       const machine = new StateMachine(config);
@@ -315,8 +315,8 @@ describe('Snapshot Dump and Load', () => {
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'NEXT' }); // main -> settings
-      machine1.send({ type: 'NEXT' }); // general -> advanced
+      machine1.handle({ type: 'NEXT' }); // main -> settings
+      machine1.handle({ type: 'NEXT' }); // general -> advanced
 
       const json = machine1.dump();
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
@@ -365,8 +365,8 @@ describe('Snapshot Dump and Load', () => {
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'TOGGLE_BOLD' });
-      machine1.send({ type: 'TOGGLE_ITALIC' });
+      machine1.handle({ type: 'TOGGLE_BOLD' });
+      machine1.handle({ type: 'TOGGLE_ITALIC' });
 
       const json = machine1.dump();
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
@@ -395,7 +395,7 @@ describe('Snapshot Dump and Load', () => {
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'START' });
+      machine1.handle({ type: 'START' });
 
       // Check state counters before dump
       const counters1 = machine1.getStateCounters();
@@ -410,8 +410,8 @@ describe('Snapshot Dump and Load', () => {
       expect(machine2.getActiveStateNodes()).toEqual(new Set(['active']));
 
       // Restart activity to check counter increments
-      machine2.send({ type: 'STOP' });
-      machine2.send({ type: 'START' });
+      machine2.handle({ type: 'STOP' });
+      machine2.handle({ type: 'START' });
       expect(machine2.getStateCounters()['active']).toBe(2);
     });
 
@@ -444,13 +444,13 @@ describe('Snapshot Dump and Load', () => {
           isHigh: ({ context }) => context.value > 75,
           isLow: ({ context }) => context.value < 25,
         },
-        reducers: {
+        assigns: {
           setValue: ({ event }) => ({ value: event.value }),
         },
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'SET', value: 80 });
+      machine1.handle({ type: 'SET', value: 80 });
 
       const json = machine1.dump();
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
@@ -458,7 +458,7 @@ describe('Snapshot Dump and Load', () => {
       expect(machine2.getActiveStateNodes()).toEqual(new Set(['high']));
 
       // Send event after load - should trigger always transitions
-      machine2.send({ type: 'SET', value: 10 });
+      machine2.handle({ type: 'SET', value: 10 });
       expect(machine2.getActiveStateNodes()).toEqual(new Set(['low']));
     });
 
@@ -478,24 +478,24 @@ describe('Snapshot Dump and Load', () => {
             },
           },
         },
-        reducers: {
+        assigns: {
           incrementStep: ({ context }) => ({ step: context.step + 1 }),
         },
       };
 
       // First cycle
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'NEXT' });
+      machine1.handle({ type: 'NEXT' });
       const json1 = machine1.dump();
 
       // Second cycle
       const machine2 = new StateMachine(config).load(JSON.parse(json1)).start();
-      machine2.send({ type: 'NEXT' });
+      machine2.handle({ type: 'NEXT' });
       const json2 = machine2.dump();
 
       // Third cycle
       const machine3 = new StateMachine(config).load(JSON.parse(json2)).start();
-      machine3.send({ type: 'NEXT' });
+      machine3.handle({ type: 'NEXT' });
 
       expect(machine3.getContext().step).toBe(3);
     });
@@ -597,23 +597,23 @@ describe('Snapshot Dump and Load', () => {
             },
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'INC' });
-      machine1.send({ type: 'INC' });
+      machine1.handle({ type: 'INC' });
+      machine1.handle({ type: 'INC' });
 
       const json = machine1.dump();
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
 
       // Continue from where we left off
-      machine2.send({ type: 'INC' });
+      machine2.handle({ type: 'INC' });
       expect(machine2.getContext().count).toBe(3);
 
-      machine2.send({ type: 'RESET' });
+      machine2.handle({ type: 'RESET' });
       expect(machine2.getActiveStateNodes()).toEqual(new Set(['idle']));
     });
 
@@ -671,13 +671,13 @@ describe('Snapshot Dump and Load', () => {
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'START' });
+      machine1.handle({ type: 'START' });
 
       const json = machine1.dump();
       const machine2 = new StateMachine(config).load(JSON.parse(json)).start();
 
       // Restart should increment instance counter
-      machine2.send({ type: 'RESTART' });
+      machine2.handle({ type: 'RESTART' });
 
       const counters = machine2.getStateCounters();
 
@@ -706,7 +706,7 @@ describe('Snapshot Dump and Load', () => {
             onEntry: ['logEntryC'],
           },
         },
-        reducers: {
+        assigns: {
           logExitA: ({ context }) => ({ log: [...context.log, 'exit-a'] }),
           logEntryB: ({ context }) => ({ log: [...context.log, 'entry-b'] }),
           logExitB: ({ context }) => ({ log: [...context.log, 'exit-b'] }),
@@ -715,7 +715,7 @@ describe('Snapshot Dump and Load', () => {
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'NEXT' }); // a -> b
+      machine1.handle({ type: 'NEXT' }); // a -> b
 
       // Check machine1's state before dump
       expect(machine1.getContext().log).toEqual(['exit-a', 'entry-b']);
@@ -727,12 +727,12 @@ describe('Snapshot Dump and Load', () => {
       expect(machine2.getContext().log).toEqual(['exit-a', 'entry-b']);
 
       // Send event after load
-      machine2.send({ type: 'NEXT' }); // b -> c
+      machine2.handle({ type: 'NEXT' }); // b -> c
 
       expect(machine2.getContext().log).toEqual(['exit-a', 'entry-b', 'exit-b', 'entry-c']);
     });
 
-    it('should throw when sending events without calling start()', () => {
+    it('should throw when handling events without calling start()', () => {
       type Context = Record<string, never>;
       type Event = { type: 'GO' };
 
@@ -749,10 +749,10 @@ describe('Snapshot Dump and Load', () => {
 
       const machine = new StateMachine(config);
 
-      expect(() => machine.send({ type: 'GO' })).toThrow('not started');
+      expect(() => machine.handle({ type: 'GO' })).toThrow('not started');
     });
 
-    it('should throw when sending events after load but before start()', () => {
+    it('should throw when handling events after load but before start()', () => {
       type Context = { count: number };
       type Event = { type: 'INC' };
 
@@ -772,7 +772,7 @@ describe('Snapshot Dump and Load', () => {
 
       const machine = new StateMachine(config).load(snapshot);
 
-      expect(() => machine.send({ type: 'INC' })).toThrow('not started');
+      expect(() => machine.handle({ type: 'INC' })).toThrow('not started');
     });
   });
 
@@ -799,7 +799,7 @@ describe('Snapshot Dump and Load', () => {
       expect(machine.isHalted()).toBe(false);
       expect(machine.getActiveStateNodes()).toEqual(new Set(['running']));
 
-      machine.send({ type: 'FINISH' });
+      machine.handle({ type: 'FINISH' });
 
       expect(machine.isHalted()).toBe(true);
       expect(machine.getActiveStateNodes()).toEqual(new Set(['done']));
@@ -823,22 +823,22 @@ describe('Snapshot Dump and Load', () => {
             type: 'final',
           },
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
       };
 
       const machine = new StateMachine(config).start();
 
-      machine.send({ type: 'INCREMENT' });
+      machine.handle({ type: 'INCREMENT' });
       expect(machine.getContext().count).toBe(1);
 
-      machine.send({ type: 'FINISH' });
+      machine.handle({ type: 'FINISH' });
       expect(machine.isHalted()).toBe(true);
 
       // These should be ignored
-      machine.send({ type: 'INCREMENT' });
-      machine.send({ type: 'INCREMENT' });
+      machine.handle({ type: 'INCREMENT' });
+      machine.handle({ type: 'INCREMENT' });
 
       expect(machine.getContext().count).toBe(1); // Still 1
       expect(machine.getActiveStateNodes()).toEqual(new Set(['done'])); // Still in done
@@ -908,7 +908,7 @@ describe('Snapshot Dump and Load', () => {
       };
 
       const machine1 = new StateMachine(config).start();
-      machine1.send({ type: 'FINISH' });
+      machine1.handle({ type: 'FINISH' });
 
       expect(machine1.isHalted()).toBe(true);
 
@@ -919,7 +919,7 @@ describe('Snapshot Dump and Load', () => {
       expect(machine2.getActiveStateNodes()).toEqual(new Set(['done']));
 
       // Should ignore events
-      machine2.send({ type: 'FINISH' });
+      machine2.handle({ type: 'FINISH' });
       expect(machine2.getActiveStateNodes()).toEqual(new Set(['done']));
     });
 
@@ -949,7 +949,7 @@ describe('Snapshot Dump and Load', () => {
 
       expect(machine.isHalted()).toBe(false);
 
-      machine.send({ type: 'COMPLETE' });
+      machine.handle({ type: 'COMPLETE' });
 
       expect(machine.isHalted()).toBe(true);
       expect(machine.getActiveStateNodes()).toEqual(new Set(['parent', 'parent.finished']));

@@ -6,7 +6,7 @@ export type StateContext = object;
 /**
  * Base event type with type discriminator
  */
-export type BaseEvent = { type: string; [key: string]: any };
+export type BaseEvent = { type: string; [key: string]: unknown };
 
 /**
  * Extract event by type
@@ -17,7 +17,7 @@ export type EventByType<Event extends BaseEvent, Type extends Event['type']> = E
 >;
 
 /**
- * Arguments for guards and reducers
+ * Arguments for guards and assigns
  */
 export interface GuardArgs<Context extends StateContext, Event extends BaseEvent> {
   context: Context;
@@ -25,7 +25,7 @@ export interface GuardArgs<Context extends StateContext, Event extends BaseEvent
   state: string;
 }
 
-export interface ReducerArgs<Context extends StateContext, Event extends BaseEvent> {
+export interface AssignArgs<Context extends StateContext, Event extends BaseEvent> {
   context: Context;
   event: Event;
   state: string;
@@ -39,33 +39,11 @@ export type Guard<Context extends StateContext, Event extends BaseEvent> = (
 ) => boolean;
 
 /**
- * Reducer function type - returns partial context to update state
+ * Assign function type - returns partial context to merge into state, or void for no changes
  */
-export type Reducer<Context extends StateContext, Event extends BaseEvent> = (
-  args: ReducerArgs<Context, Event>
-) => Partial<Context>;
-
-/**
- * Typed reducer for specific event type (optional, for better type safety)
- */
-export type TypedReducer<
-  Context extends StateContext,
-  Event extends BaseEvent,
-  Type extends Event['type'],
-> = (args: {
-  context: Context;
-  event: EventByType<Event, Type>;
-  state: string;
-}) => Partial<Context>;
-
-/**
- * Typed guard for specific event type (optional, for better type safety)
- */
-export type TypedGuard<
-  Context extends StateContext,
-  Event extends BaseEvent,
-  Type extends Event['type'],
-> = (args: { context: Context; event: EventByType<Event, Type>; state: string }) => boolean;
+export type Assign<Context extends StateContext, Event extends BaseEvent> = (
+  args: AssignArgs<Context, Event>
+) => Partial<Context> | void;
 
 /**
  * Guard reference - either a string/symbol reference or a logical combination
@@ -79,7 +57,22 @@ export type GuardRef =
   | { type: 'not'; item: GuardRef };
 
 /**
- * Transition target configuration
+ * Transition target configuration (user-facing type)
+ *
+ * This is the configuration object users provide to specify a transition.
+ * It can include:
+ * - target: The destination state ID (optional for internal transitions)
+ * - guard: A guard reference to conditionally enable the transition
+ * - assign: An assign reference to update context during the transition
+ *
+ * @example
+ * ```typescript
+ * // External transition with guard
+ * { target: 'active', guard: 'isEnabled' }
+ *
+ * // Internal transition (context-only, no state change)
+ * { assign: 'increment' }
+ * ```
  */
 export interface TransitionConfig {
   target?: string;
@@ -100,21 +93,12 @@ export type OnTransitions<Event extends BaseEvent> = Partial<
 >;
 
 /**
- * "always" transitions - unconditional transitions checked after every event
- */
-export interface AlwaysTransition {
-  target?: string;
-  guard?: GuardRef;
-  assign?: string | symbol;
-}
-
-/**
  * State configuration - can include nested states
  */
 export interface StateConfig<Event extends BaseEvent> {
   type?: 'final' | 'parallel';
   on?: OnTransitions<Event>;
-  always?: AlwaysTransition | AlwaysTransition[];
+  always?: TransitionTarget;
   activities?: Array<string | symbol>;
   onEntry?: Array<string | symbol>;
   onExit?: Array<string | symbol>;
@@ -124,23 +108,12 @@ export interface StateConfig<Event extends BaseEvent> {
 }
 
 /**
- * Map of state names to state configurations
- */
-export type StateMap<Context extends StateContext, Event extends BaseEvent> = {
-  initial: string;
-  guards?: Record<string | symbol, Guard<Context, Event>>;
-  reducers?: Record<string | symbol, Reducer<Context, Event>>;
-  on?: OnTransitions<Event>;
-  states: Record<string, StateConfig<Event>>;
-};
-
-/**
  * Top-level state machine configuration
  */
 export interface StateMachineConfig<Context extends StateContext, Event extends BaseEvent> {
   initialContext: Context;
   guards?: Record<string | symbol, Guard<Context, Event>>;
-  reducers?: Record<string | symbol, Reducer<Context, Event>>;
+  assigns?: Record<string | symbol, Assign<Context, Event>>;
   initial: string;
   on?: OnTransitions<Event>;
   states: Record<string, StateConfig<Event>>;
@@ -223,3 +196,21 @@ export function or(...guards: GuardRef[]): GuardRef {
 export function not(guard: GuardRef): GuardRef {
   return { type: 'not', item: guard };
 }
+
+export type AssignEntry<Context extends StateContext, Event extends BaseEvent> =
+  | Assign<Context, Event>
+  | {
+      [T in Event['type']]: {
+        event: T;
+        handler: Assign<Context, Extract<Event, { type: T }>>;
+      };
+    }[Event['type']];
+
+export type GuardEntry<Context extends StateContext, Event extends BaseEvent> =
+  | Guard<Context, Event>
+  | {
+      [T in Event['type']]: {
+        event: T;
+        handler: Guard<Context, Extract<Event, { type: T }>>;
+      };
+    }[Event['type']];

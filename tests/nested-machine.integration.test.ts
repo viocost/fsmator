@@ -71,7 +71,7 @@ describe('Nested Machine Integration (Form Validation)', () => {
           },
         },
       },
-      reducers: {
+      assigns: {
         incrementAttempts: ({ context }) => ({
           submitAttempts: context.submitAttempts + 1,
         }),
@@ -104,15 +104,15 @@ describe('Nested Machine Integration (Form Validation)', () => {
   it('should transition from idle to editing', () => {
     const machine = createFormMachine();
 
-    machine.send({ type: 'EDIT' });
+    machine.handle({ type: 'EDIT' });
     expect(machine.getActiveStateNodes().has('editing')).toBe(true);
   });
 
   it('should enter submitting.validating when submitting', () => {
     const machine = createFormMachine();
 
-    machine.send({ type: 'EDIT' });
-    machine.send({ type: 'SUBMIT' });
+    machine.handle({ type: 'EDIT' });
+    machine.handle({ type: 'SUBMIT' });
 
     expect(machine.getActiveStateNodes().has('submitting')).toBe(true);
     expect(machine.getActiveStateNodes().has('submitting.validating')).toBe(true);
@@ -122,13 +122,13 @@ describe('Nested Machine Integration (Form Validation)', () => {
   it('should complete successful submission flow', () => {
     const machine = createFormMachine();
 
-    machine.send({ type: 'EDIT' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'VALIDATE_SUCCESS' });
+    machine.handle({ type: 'EDIT' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'VALIDATE_SUCCESS' });
 
     expect(machine.getActiveStateNodes().has('submitting.sending')).toBe(true);
 
-    machine.send({ type: 'API_SUCCESS' });
+    machine.handle({ type: 'API_SUCCESS' });
 
     expect(machine.getActiveStateNodes().has('submitting.success')).toBe(true);
     expect(machine.getContext().submitAttempts).toBe(1);
@@ -137,9 +137,9 @@ describe('Nested Machine Integration (Form Validation)', () => {
   it('should handle validation failure', () => {
     const machine = createFormMachine();
 
-    machine.send({ type: 'EDIT' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'VALIDATE_FAIL', errors: ['Invalid email', 'Name required'] });
+    machine.handle({ type: 'EDIT' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'VALIDATE_FAIL', errors: ['Invalid email', 'Name required'] });
 
     expect(machine.getActiveStateNodes().has('submitting.failed')).toBe(true);
     expect(machine.getContext().errors).toEqual(['Invalid email', 'Name required']);
@@ -148,10 +148,10 @@ describe('Nested Machine Integration (Form Validation)', () => {
   it('should handle API error', () => {
     const machine = createFormMachine();
 
-    machine.send({ type: 'EDIT' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'VALIDATE_SUCCESS' });
-    machine.send({ type: 'API_ERROR', error: 'Network error' });
+    machine.handle({ type: 'EDIT' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'VALIDATE_SUCCESS' });
+    machine.handle({ type: 'API_ERROR', error: 'Network error' });
 
     expect(machine.getActiveStateNodes().has('submitting.failed')).toBe(true);
     expect(machine.getContext().errors).toEqual(['Network error']);
@@ -160,13 +160,13 @@ describe('Nested Machine Integration (Form Validation)', () => {
   it('should reset from failed state to editing', () => {
     const machine = createFormMachine();
 
-    machine.send({ type: 'EDIT' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'VALIDATE_FAIL', errors: ['Error'] });
+    machine.handle({ type: 'EDIT' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'VALIDATE_FAIL', errors: ['Error'] });
 
     expect(machine.getActiveStateNodes().has('submitting.failed')).toBe(true);
 
-    machine.send({ type: 'RESET' });
+    machine.handle({ type: 'RESET' });
 
     expect(machine.getActiveStateNodes().has('editing')).toBe(true);
     expect(machine.getActiveStateNodes().has('submitting')).toBe(false);
@@ -175,14 +175,14 @@ describe('Nested Machine Integration (Form Validation)', () => {
   it('should reset from success state to idle', () => {
     const machine = createFormMachine();
 
-    machine.send({ type: 'EDIT' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'VALIDATE_SUCCESS' });
-    machine.send({ type: 'API_SUCCESS' });
+    machine.handle({ type: 'EDIT' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'VALIDATE_SUCCESS' });
+    machine.handle({ type: 'API_SUCCESS' });
 
     expect(machine.getActiveStateNodes().has('submitting.success')).toBe(true);
 
-    machine.send({ type: 'RESET' });
+    machine.handle({ type: 'RESET' });
 
     expect(machine.getActiveStateNodes().has('idle')).toBe(true);
     expect(machine.getActiveStateNodes().has('submitting')).toBe(false);
@@ -192,22 +192,22 @@ describe('Nested Machine Integration (Form Validation)', () => {
     const machine = createFormMachine();
 
     // First attempt
-    machine.send({ type: 'EDIT' });
-    machine.send({ type: 'SUBMIT' });
+    machine.handle({ type: 'EDIT' });
+    machine.handle({ type: 'SUBMIT' });
     expect(machine.getContext().submitAttempts).toBe(1);
 
-    machine.send({ type: 'VALIDATE_FAIL', errors: ['Error'] });
-    machine.send({ type: 'RESET' });
+    machine.handle({ type: 'VALIDATE_FAIL', errors: ['Error'] });
+    machine.handle({ type: 'RESET' });
 
     // Second attempt
-    machine.send({ type: 'SUBMIT' });
+    machine.handle({ type: 'SUBMIT' });
     expect(machine.getContext().submitAttempts).toBe(2);
 
-    machine.send({ type: 'VALIDATE_FAIL', errors: ['Error'] });
-    machine.send({ type: 'RESET' });
+    machine.handle({ type: 'VALIDATE_FAIL', errors: ['Error'] });
+    machine.handle({ type: 'RESET' });
 
     // Third attempt
-    machine.send({ type: 'SUBMIT' });
+    machine.handle({ type: 'SUBMIT' });
     expect(machine.getContext().submitAttempts).toBe(3);
   });
 
@@ -215,15 +215,15 @@ describe('Nested Machine Integration (Form Validation)', () => {
     const machine = createFormMachine();
 
     // Failed submission
-    machine.send({ type: 'EDIT' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'VALIDATE_FAIL', errors: ['Invalid'] });
+    machine.handle({ type: 'EDIT' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'VALIDATE_FAIL', errors: ['Invalid'] });
 
     // Retry
-    machine.send({ type: 'RESET' });
-    machine.send({ type: 'SUBMIT' });
-    machine.send({ type: 'VALIDATE_SUCCESS' });
-    machine.send({ type: 'API_SUCCESS' });
+    machine.handle({ type: 'RESET' });
+    machine.handle({ type: 'SUBMIT' });
+    machine.handle({ type: 'VALIDATE_SUCCESS' });
+    machine.handle({ type: 'API_SUCCESS' });
 
     expect(machine.getActiveStateNodes().has('submitting.success')).toBe(true);
     expect(machine.getContext().submitAttempts).toBe(2);

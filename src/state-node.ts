@@ -14,7 +14,7 @@ export type NodeKind = 'atomic' | 'compound' | 'parallel';
  * Transition definition at the node level
  */
 export interface NodeTransition {
-  targetIds?: string[]; // undefined = internal transition (context-only)
+  targetId?: string; // undefined = internal transition (context-only)
   guard?: GuardRef;
   assign?: string | symbol;
 }
@@ -151,11 +151,12 @@ export class StateNode {
     return this._onTransitions.get(eventType) || [];
   }
 
-  /**
-   * Get always transitions
-   */
   get alwaysTransitions(): readonly NodeTransition[] {
     return this._alwaysTransitions;
+  }
+
+  get onTransitions(): ReadonlyMap<string, NodeTransition[]> {
+    return this._onTransitions;
   }
 
   /**

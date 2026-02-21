@@ -29,14 +29,14 @@ describe('StateMachine', () => {
       expect(root.initial?.key).toBe('idle');
     });
 
-    it('should register guards and reducers', () => {
+    it('should register guards and assigns', () => {
       const config: StateMachineConfig<TestContext, TestEvents> = {
         initialContext: { count: 0 },
         initial: 'idle',
         guards: {
           isPositive: ({ context }) => context.count > 0,
         },
-        reducers: {
+        assigns: {
           increment: ({ context }) => ({ count: context.count + 1 }),
         },
         states: {
@@ -47,7 +47,7 @@ describe('StateMachine', () => {
       const machine = new StateMachine(config).start();
 
       expect(machine.getGuard('isPositive')).toBeDefined();
-      expect(machine.getReducer('increment')).toBeDefined();
+      expect(machine.getAssign('increment')).toBeDefined();
     });
 
     it('should provide node lookup by ID', () => {
@@ -180,13 +180,19 @@ describe('StateMachine', () => {
       const transitions = idle?.getTransitions('NEXT');
 
       expect(transitions).toHaveLength(1);
-      expect(transitions?.[0]?.targetIds).toEqual(['active']);
+      expect(transitions?.[0]?.targetId).toBe('active');
     });
 
     it('should compile transitions with guards and assigns', () => {
       const config: StateMachineConfig<TestContext, TestEvents> = {
         initialContext: { count: 0 },
         initial: 'idle',
+        guards: {
+          isPositive: ({ context }) => context.count > 0,
+        },
+        assigns: {
+          increment: ({ context }) => ({ count: context.count + 1 }),
+        },
         states: {
           idle: {
             on: {
@@ -214,6 +220,10 @@ describe('StateMachine', () => {
       const config: StateMachineConfig<TestContext, TestEvents> = {
         initialContext: { count: 0 },
         initial: 'idle',
+        guards: {
+          guard1: ({ context }) => context.count > 0,
+          guard2: ({ context }) => context.count > 5,
+        },
         states: {
           idle: {
             on: {
@@ -235,9 +245,9 @@ describe('StateMachine', () => {
       const transitions = idle?.getTransitions('NEXT');
 
       expect(transitions).toHaveLength(3);
-      expect(transitions?.[0]?.targetIds).toEqual(['active']);
-      expect(transitions?.[1]?.targetIds).toEqual(['other']);
-      expect(transitions?.[2]?.targetIds).toEqual(['default']);
+      expect(transitions?.[0]?.targetId).toBe('active');
+      expect(transitions?.[1]?.targetId).toBe('other');
+      expect(transitions?.[2]?.targetId).toBe('default');
     });
 
     it('should compile always transitions', () => {
@@ -259,7 +269,7 @@ describe('StateMachine', () => {
       const idle = machine.getNode('idle');
 
       expect(idle?.alwaysTransitions).toHaveLength(1);
-      expect(idle?.alwaysTransitions[0]?.targetIds).toEqual(['active']);
+      expect(idle?.alwaysTransitions[0]?.targetId).toBe('active');
     });
   });
 
@@ -290,9 +300,9 @@ describe('StateMachine', () => {
 
       // Should resolve to sibling's full ID
       expect(child2).toBeDefined();
-      expect(transitions?.[0]?.targetIds?.[0]).toBeTruthy();
+      expect(transitions?.[0]?.targetId).toBeTruthy();
       // The actual resolved ID (implementation may vary)
-      expect(transitions?.[0]?.targetIds?.[0]).toMatch(/child2/);
+      expect(transitions?.[0]?.targetId).toMatch(/child2/);
     });
 
     it('should resolve top-level targets from nested states', () => {
@@ -318,7 +328,7 @@ describe('StateMachine', () => {
       const child = machine.getNode('parent.child');
       const transitions = child?.getTransitions('NEXT');
 
-      expect(transitions?.[0]?.targetIds).toEqual(['other']);
+      expect(transitions?.[0]?.targetId).toBe('other');
     });
   });
 
@@ -338,6 +348,239 @@ describe('StateMachine', () => {
       const active = machine.getNode('active');
 
       expect(active?.activities).toEqual(['ACTIVITY_ONE', 'ACTIVITY_TWO']);
+    });
+  });
+
+  describe('validation', () => {
+    it('should throw error if guard implementation is missing', () => {
+      const config: StateMachineConfig<TestContext, TestEvents> = {
+        initialContext: { count: 0 },
+        initial: 'idle',
+        states: {
+          idle: {
+            on: {
+              NEXT: {
+                target: 'active',
+                guard: 'nonExistentGuard', // Guard not defined
+              },
+            },
+          },
+          active: {},
+        },
+      };
+
+      const machine = new StateMachine(config);
+      expect(() => machine.start()).toThrow('Missing guard implementation(s): nonExistentGuard');
+    });
+
+    it('should throw error if assign implementation is missing', () => {
+      const config: StateMachineConfig<TestContext, TestEvents> = {
+        initialContext: { count: 0 },
+        initial: 'idle',
+        states: {
+          idle: {
+            on: {
+              NEXT: {
+                target: 'active',
+                assign: 'nonExistentAssign', // Assign not defined
+              },
+            },
+          },
+          active: {},
+        },
+      };
+
+      const machine = new StateMachine(config);
+      expect(() => machine.start()).toThrow('Missing assign implementation(s): nonExistentAssign');
+    });
+
+    it('should throw error for missing guards in compound guard expressions', () => {
+      const config: StateMachineConfig<TestContext, TestEvents> = {
+        initialContext: { count: 0 },
+        initial: 'idle',
+        guards: {
+          guardA: ({ context }) => context.count > 0,
+          // guardB is missing
+        },
+        states: {
+          idle: {
+            on: {
+              NEXT: {
+                target: 'active',
+                guard: { type: 'and', items: ['guardA', 'guardB'] }, // guardB missing
+              },
+            },
+          },
+          active: {},
+        },
+      };
+
+      const machine = new StateMachine(config);
+      expect(() => machine.start()).toThrow('Missing guard implementation(s): guardB');
+    });
+
+    it('should throw error for missing assigns in entry actions', () => {
+      const config: StateMachineConfig<TestContext, TestEvents> = {
+        initialContext: { count: 0 },
+        initial: 'idle',
+        states: {
+          idle: {
+            onEntry: ['missingEntryAction'], // Assign not defined
+          },
+        },
+      };
+
+      const machine = new StateMachine(config);
+      expect(() => machine.start()).toThrow('Missing assign implementation(s): missingEntryAction');
+    });
+
+    it('should throw error for missing assigns in exit actions', () => {
+      const config: StateMachineConfig<TestContext, TestEvents> = {
+        initialContext: { count: 0 },
+        initial: 'idle',
+        states: {
+          idle: {
+            onExit: ['missingExitAction'], // Assign not defined
+          },
+          active: {},
+        },
+      };
+
+      const machine = new StateMachine(config);
+      expect(() => machine.start()).toThrow('Missing assign implementation(s): missingExitAction');
+    });
+
+    it('should throw error for missing assigns in always transitions', () => {
+      const config: StateMachineConfig<TestContext, TestEvents> = {
+        initialContext: { count: 0 },
+        initial: 'idle',
+        states: {
+          idle: {
+            always: {
+              assign: 'missingAlwaysAssign', // Assign not defined
+            },
+          },
+        },
+      };
+
+      const machine = new StateMachine(config);
+      expect(() => machine.start()).toThrow(
+        'Missing assign implementation(s): missingAlwaysAssign'
+      );
+    });
+
+    it('should throw error for multiple missing guards', () => {
+      const config: StateMachineConfig<TestContext, TestEvents> = {
+        initialContext: { count: 0 },
+        initial: 'idle',
+        states: {
+          idle: {
+            on: {
+              NEXT: {
+                target: 'active',
+                guard: 'guardA',
+              },
+            },
+          },
+          active: {
+            on: {
+              PREV: {
+                target: 'idle',
+                guard: 'guardB',
+              },
+            },
+          },
+        },
+      };
+
+      const machine = new StateMachine(config);
+      expect(() => machine.start()).toThrow('Missing guard implementation(s): guardA, guardB');
+    });
+
+    it('should throw error for multiple missing assigns', () => {
+      const config: StateMachineConfig<TestContext, TestEvents> = {
+        initialContext: { count: 0 },
+        initial: 'idle',
+        states: {
+          idle: {
+            onEntry: ['assignA'],
+            on: {
+              NEXT: {
+                target: 'active',
+                assign: 'assignB',
+              },
+            },
+          },
+          active: {
+            onExit: ['assignC'],
+          },
+        },
+      };
+
+      const machine = new StateMachine(config);
+      expect(() => machine.start()).toThrow(
+        'Missing assign implementation(s): assignA, assignB, assignC'
+      );
+    });
+
+    it('should not throw error if all guards and assigns are implemented', () => {
+      const config: StateMachineConfig<TestContext, TestEvents> = {
+        initialContext: { count: 0 },
+        initial: 'idle',
+        guards: {
+          isPositive: ({ context }) => context.count > 0,
+        },
+        assigns: {
+          increment: ({ context }) => ({ count: context.count + 1 }),
+          reset: () => ({ count: 0 }),
+        },
+        states: {
+          idle: {
+            onEntry: ['reset'],
+            on: {
+              NEXT: {
+                target: 'active',
+                guard: 'isPositive',
+                assign: 'increment',
+              },
+            },
+          },
+          active: {},
+        },
+      };
+
+      const machine = new StateMachine(config);
+      expect(() => machine.start()).not.toThrow();
+    });
+
+    it('should not throw error if all guards and assigns are implemented', () => {
+      const config: StateMachineConfig<TestContext, TestEvents> = {
+        initialContext: { count: 0 },
+        initial: 'idle',
+        guards: {
+          isPositive: ({ context }) => context.count > 0,
+        },
+        assigns: {
+          increment: ({ context }) => ({ count: context.count + 1 }),
+          reset: () => ({ count: 0 }),
+        },
+        states: {
+          idle: {
+            onEntry: ['reset'],
+            on: {
+              NEXT: {
+                target: 'active',
+                guard: 'isPositive',
+                assign: 'increment',
+              },
+            },
+          },
+          active: {},
+        },
+      };
+
+      const machine = new StateMachine(config);
+      expect(() => machine.start()).not.toThrow();
     });
   });
 });
