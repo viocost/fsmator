@@ -245,14 +245,14 @@ const config: StateMachineConfig<Context, Event> = {
 
 #### Tracking Active Activities
 
-Use `getActiveActivities()` to get metadata for all currently active activities:
+Use `getActivities()` to get metadata for all currently active activities:
 
 ```typescript
 const machine = new StateMachine(config).start();
 machine.handle({ type: 'FETCH' });
 
 // Get all active activities
-const activities = machine.getActiveActivities();
+const activities = machine.getActivities();
 // Returns:
 // [
 //   { type: 'fetchData', stateId: 'loading', instanceId: 1 },
@@ -303,7 +303,7 @@ machine.getStateCounters();
 ```typescript
 // React example (pseudo-code)
 useEffect(() => {
-  const activities = machine.getActiveActivities();
+  const activities = machine.getActivities();
 
   const cleanup = activities.map((activity) => {
     if (activity.type === 'fetchData') {

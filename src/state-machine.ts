@@ -3,6 +3,7 @@
  * Holds the root node, manages guards/assigns registry, compiles configuration
  */
 
+import { createHash } from 'crypto';
 import { StateNode, NodeKind, NodeTransition } from './state-node';
 import type {
   StateContext,
@@ -689,6 +690,151 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
   }
 
   /**
+   * Get deterministic hash of the state machine schema
+   *
+   * Returns an MD5 hex string representing the structure of the state machine,
+   * ignoring implementation details (guard/assign functions) and runtime state.
+   *
+   * The hash includes:
+   * - State hierarchy (node IDs, keys, kinds)
+   * - Transition structure (event types, targets)
+   * - Guard and assign references (not implementations)
+   * - Activities, onEntry, onExit action references
+   * - Initial states, final states, history settings
+   *
+   * Use this to verify schema compatibility when loading snapshots or
+   * comparing machine versions.
+   *
+   * @returns MD5 hash as hex string
+   */
+  getHash(): string {
+    const schema = this.buildSchemaObject(this.root);
+    const schemaJson = JSON.stringify(schema, this.sortedReplacer);
+    return createHash('md5').update(schemaJson).digest('hex');
+  }
+
+  /**
+   * Build a normalized schema object for hashing
+   * Recursively traverses the state tree and extracts structural information
+   */
+  private buildSchemaObject(node: StateNode): unknown {
+    // Skip root node wrapper
+    if (node.id === '__root__') {
+      const children: Record<string, unknown> = {};
+      for (const child of node.children) {
+        children[child.key] = this.buildSchemaObject(child);
+      }
+      return {
+        initial: node.initial?.key,
+        states: children,
+      };
+    }
+
+    const nodeSchema: Record<string, unknown> = {
+      kind: node.kind,
+      final: node.final,
+      history: node.history,
+    };
+
+    // Add initial for compound states
+    if (node.initial) {
+      nodeSchema.initial = node.initial.key;
+    }
+
+    // Add children if any
+    if (node.children.length > 0) {
+      const children: Record<string, unknown> = {};
+      for (const child of node.children) {
+        children[child.key] = this.buildSchemaObject(child);
+      }
+      nodeSchema.states = children;
+    }
+
+    // Add transitions (on)
+    if (node.onTransitions.size > 0) {
+      const transitions: Record<string, unknown[]> = {};
+      for (const [eventType, transitionList] of node.onTransitions.entries()) {
+        transitions[eventType] = transitionList.map((t) => ({
+          target: t.targetId,
+          guard: this.serializeGuardRef(t.guard),
+          assign: t.assign ? String(t.assign) : undefined,
+        }));
+      }
+      nodeSchema.on = transitions;
+    }
+
+    // Add always transitions
+    if (node.alwaysTransitions.length > 0) {
+      nodeSchema.always = node.alwaysTransitions.map((t) => ({
+        target: t.targetId,
+        guard: this.serializeGuardRef(t.guard),
+        assign: t.assign ? String(t.assign) : undefined,
+      }));
+    }
+
+    // Add activities
+    if (node.activities.length > 0) {
+      nodeSchema.activities = node.activities.map((a) => String(a));
+    }
+
+    // Add onEntry/onExit
+    if (node.onEntry.length > 0) {
+      nodeSchema.onEntry = node.onEntry.map((a) => String(a));
+    }
+    if (node.onExit.length > 0) {
+      nodeSchema.onExit = node.onExit.map((a) => String(a));
+    }
+
+    return nodeSchema;
+  }
+
+  /**
+   * Serialize a guard reference to a string representation
+   */
+  private serializeGuardRef(guardRef: GuardRef | undefined): string | undefined {
+    if (!guardRef) return undefined;
+
+    if (typeof guardRef === 'string' || typeof guardRef === 'symbol') {
+      return String(guardRef);
+    }
+
+    if (typeof guardRef === 'object' && 'type' in guardRef) {
+      if (guardRef.type === 'ref') {
+        return `ref:${String(guardRef.id)}`;
+      } else if (guardRef.type === 'and') {
+        const items = guardRef.items.map((item) => this.serializeGuardRef(item)).join(',');
+        return `and:[${items}]`;
+      } else if (guardRef.type === 'or') {
+        const items = guardRef.items.map((item) => this.serializeGuardRef(item)).join(',');
+        return `or:[${items}]`;
+      } else if (guardRef.type === 'not') {
+        return `not:${this.serializeGuardRef(guardRef.item)}`;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * JSON.stringify replacer that sorts object keys alphabetically
+   * Ensures deterministic ordering regardless of insertion order
+   */
+  private sortedReplacer(_key: string, value: unknown): unknown {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return Object.keys(value)
+        .sort()
+        .reduce(
+          (sorted, key) => {
+            sorted[key] = (value as Record<string, unknown>)[key];
+            return sorted;
+          },
+          {} as Record<string, unknown>
+        );
+    }
+    return value;
+  }
+
+  /**
    * Get shallow history snapshot (for serialization)
    */
   private getStateHistory(): StateHistorySnapshot {
@@ -727,7 +873,7 @@ export class StateMachine<Context extends StateContext, Event extends BaseEvent>
    *
    * @returns Array of activity metadata for all active activities
    */
-  getActiveActivities(): ActivityMetadata[] {
+  getActivities(): ActivityMetadata[] {
     const activities: ActivityMetadata[] = [];
 
     // Iterate through all active states

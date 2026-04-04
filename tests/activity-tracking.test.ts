@@ -180,7 +180,7 @@ describe('Activity Tracking', () => {
       };
 
       const machine = new StateMachine(config).start();
-      const activities = machine.getActiveActivities();
+      const activities = machine.getActivities();
 
       expect(activities).toEqual([]);
     });
@@ -197,7 +197,7 @@ describe('Activity Tracking', () => {
       };
 
       const machine = new StateMachine(config).start();
-      const activities = machine.getActiveActivities();
+      const activities = machine.getActivities();
 
       expect(activities).toHaveLength(2);
       expect(activities).toContainEqual({
@@ -231,7 +231,7 @@ describe('Activity Tracking', () => {
       const machine = new StateMachine(config).start();
 
       // Initial state A (instanceId = 1)
-      let activities = machine.getActiveActivities();
+      let activities = machine.getActivities();
       expect(activities).toEqual([
         {
           type: 'activityA',
@@ -242,7 +242,7 @@ describe('Activity Tracking', () => {
 
       // Transition to B
       machine.handle({ type: 'TOGGLE' });
-      activities = machine.getActiveActivities();
+      activities = machine.getActivities();
       expect(activities).toEqual([
         {
           type: 'activityB',
@@ -253,7 +253,7 @@ describe('Activity Tracking', () => {
 
       // Transition back to A (instanceId = 2)
       machine.handle({ type: 'TOGGLE' });
-      activities = machine.getActiveActivities();
+      activities = machine.getActivities();
       expect(activities).toEqual([
         {
           type: 'activityA',
@@ -281,7 +281,7 @@ describe('Activity Tracking', () => {
       };
 
       const machine = new StateMachine(config).start();
-      const activities = machine.getActiveActivities();
+      const activities = machine.getActivities();
 
       expect(activities).toHaveLength(2);
       expect(activities).toContainEqual({
@@ -325,7 +325,7 @@ describe('Activity Tracking', () => {
       };
 
       const machine = new StateMachine(config).start();
-      const activities = machine.getActiveActivities();
+      const activities = machine.getActivities();
 
       expect(activities).toHaveLength(2);
       expect(activities).toContainEqual({
@@ -602,11 +602,11 @@ describe('Activity Tracking', () => {
       machine1.handle({ type: 'TOGGLE' }); // a → b
 
       const snapshot = machine1.getSnapshot();
-      const activities1 = machine1.getActiveActivities();
+      const activities1 = machine1.getActivities();
 
       // Restore to new machine
       const machine2 = new StateMachine(config).load(snapshot);
-      const activities2 = machine2.getActiveActivities();
+      const activities2 = machine2.getActivities();
 
       expect(activities2).toEqual(activities1);
       expect(activities2).toEqual([
