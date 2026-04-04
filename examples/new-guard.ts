@@ -1,4 +1,5 @@
-import { StateContext } from '../src/types';
+import { StateContext, StateConfig, StateMachineConfig } from '../src/types';
+import { defineAssigns } from '../src/util';
 
 type Handler<Context, Event> = (args: {
   context: Context;
@@ -14,10 +15,6 @@ type AssignEntry<Context, Event extends { type: string }> =
       };
     }[Event['type']];
 
-const defineAssigns = <Context, Event extends { type: string }>(assigns: {
-  [K: string]: AssignEntry<Context, Event>;
-}) => assigns;
-
 // Define your context type
 interface MyContext extends StateContext {
   counter: number;
@@ -32,11 +29,10 @@ type Events =
   | { type: 'setMessage'; text: string };
 
 const assigns = defineAssigns<MyContext, Events>({
-  one: ({ context, event }) => {
+  one: () => {
     // event is full union
     return {};
   },
-
   two: {
     event: 'subtract',
     handler: ({ context, event }) => {
@@ -44,3 +40,21 @@ const assigns = defineAssigns<MyContext, Events>({
     },
   },
 });
+
+const config: StateMachineConfig<MyContext, Events> = {
+  initialContext: {
+    counter: 0,
+    message: '',
+  },
+  assigns,
+  initial: 'idle',
+  states: {
+    idle: {
+      on: {
+        add: {
+          target: 'active',
+        },
+      },
+    },
+  },
+};
